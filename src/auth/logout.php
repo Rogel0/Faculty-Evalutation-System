@@ -6,6 +6,6 @@ session_start();
 // Clear any previous messages
 unset($_SESSION['error']);
 unset($_SESSION['success']);
-$_SESSION['error'] = 'You have successfully logged out!';
+$_SESSION['success'] = 'You have successfully logged out!';
 header('Location: ../index.php');
 exit;
