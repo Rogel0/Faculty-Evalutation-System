@@ -4,7 +4,7 @@ include('../config/database.php');
 
 // Get criteria for dropdown
 $criteriaOptions = [];
-$criteriaQuery = "SELECT id, criteria_name FROM tblcriteria ORDER BY criteria_name";
+$criteriaQuery = "SELECT id, criteria_name FROM tblstudent_criteria ORDER BY criteria_name";
 $criteriaResult = $conn->query($criteriaQuery);
 if ($criteriaResult) {
     while ($row = $criteriaResult->fetch_assoc()) {
@@ -15,28 +15,14 @@ if ($criteriaResult) {
 // Get existing questions grouped by criteria
 $questionsData = [];
 $questionsQuery = "SELECT q.id, q.question_text, q.criteria_id, c.criteria_name 
-                   FROM tblquestionnaires q 
-                   LEFT JOIN tblcriteria c ON q.criteria_id = c.id 
+                   FROM tblstudent_questionnaires q 
+                   LEFT JOIN tblstudent_criteria c ON q.criteria_id = c.id 
                    ORDER BY c.criteria_name, q.id";
 $questionsResult = $conn->query($questionsQuery);
 if ($questionsResult) {
     while ($row = $questionsResult->fetch_assoc()) {
         $questionsData[$row['criteria_name']][] = $row;
     }
-}
-
-// Check for session messages
-$success_message = '';
-$error_message = '';
-
-if (isset($_SESSION['success_message'])) {
-    $success_message = $_SESSION['success_message'];
-    unset($_SESSION['success_message']);
-}
-
-if (isset($_SESSION['error_message'])) {
-    $error_message = $_SESSION['error_message'];
-    unset($_SESSION['error_message']);
 }
 ?>
 
@@ -57,7 +43,6 @@ if (isset($_SESSION['error_message'])) {
         <div class="bg-gray-100 rounded-lg p-6 shadow-sm">
             <h2 class="text-lg font-semibold text-gray-800 mb-6">Question Form</h2>
 
-            <!-- Regular form submission - NO AJAX -->
             <form action="../actions/AddQuestion.php" method="POST" class="space-y-6">
                 <!-- Criteria Selection -->
                 <div>

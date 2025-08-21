@@ -1,4 +1,5 @@
 <?php
+include('../../components/admin/drawer/add_student.php');
 ?>
 <div class="p-6">
     <h1 class="text-2xl font-semibold mb-2">Academic Year</h1>
