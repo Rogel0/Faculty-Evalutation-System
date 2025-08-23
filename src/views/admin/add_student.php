@@ -7,3 +7,5 @@ include('../config/database.php');
         <?php include('../components/admin/add_student.php') ?>
     </div>
 </div>
+
+<script src="../scripts/admin/add_student_drawer.js"></script>
