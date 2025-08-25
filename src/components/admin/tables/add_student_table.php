@@ -12,12 +12,12 @@
         </thead>
         <tbody class="bg-white">
             <?php
-            $result = $conn->query("SELECT student_id, firstname, lastname, email, course FROM tbluser_students ORDER BY student_id DESC LIMIT 10");
+            $result = $conn->query("SELECT id, firstname, lastname, email, course FROM users WHERE user_type = 'student' ORDER BY id DESC LIMIT 10");
             if ($result && $result->num_rows > 0):
                 $rowIndex = 0;
                 while ($row = $result->fetch_assoc()): ?>
                     <tr class="<?php echo $rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'; ?> hover:bg-gray-200 transition">
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-semibold border-b border-gray-100 text-center"><?php echo htmlspecialchars($row['student_id']); ?></td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-semibold border-b border-gray-100 text-center"><?php echo htmlspecialchars($row['id']); ?></td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 border-b border-gray-100 text-center"><?php echo htmlspecialchars($row['firstname']); ?></td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 border-b border-gray-100 text-center"><?php echo htmlspecialchars($row['lastname']); ?></td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 border-b border-gray-100 text-center"><?php echo htmlspecialchars($row['email']); ?></td>

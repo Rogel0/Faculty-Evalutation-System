@@ -4,7 +4,8 @@ include('../config/database.php');
 
 // Get criteria for dropdown
 $criteriaOptions = [];
-$criteriaQuery = "SELECT id, criteria_name FROM tblteacher_criteria ORDER BY criteria_name";
+
+$criteriaQuery = "SELECT id, name FROM criteria WHERE evaluator_type = 'teacher' ORDER BY name";
 $criteriaResult = $conn->query($criteriaQuery);
 if ($criteriaResult) {
     while ($row = $criteriaResult->fetch_assoc()) {
@@ -14,14 +15,16 @@ if ($criteriaResult) {
 
 // Get existing questions grouped by criteria
 $questionsData = [];
-$questionsQuery = "SELECT q.id, q.question_text, q.criteria_id, c.criteria_name 
-                   FROM tblteacher_questionnaires q 
-                   LEFT JOIN tblteacher_criteria c ON q.criteria_id = c.id 
-                   ORDER BY c.criteria_name, q.id";
+
+$questionsQuery = "SELECT q.id, q.question_text, q.criteria_id, c.name 
+                   FROM questionnaires q 
+                   LEFT JOIN criteria c ON q.criteria_id = c.id 
+                   WHERE c.evaluator_type = 'teacher' 
+                   ORDER BY c.name, q.id";
 $questionsResult = $conn->query($questionsQuery);
 if ($questionsResult) {
     while ($row = $questionsResult->fetch_assoc()) {
-        $questionsData[$row['criteria_name']][] = $row;
+        $questionsData[$row['name']][] = $row;
     }
 }
 ?>
@@ -53,10 +56,10 @@ if ($questionsResult) {
                             <option value="">Please select here</option>
                             <?php foreach ($criteriaOptions as $criteria): ?>
                                 <option value="<?php echo $criteria['id']; ?>">
-                                    <?php echo htmlspecialchars($criteria['criteria_name']); ?>
+                                    <?php echo htmlspecialchars($criteria['name']); ?>
                                     <?php
                                     // Show count of existing questions
-                                    $questionCount = isset($questionsData[$criteria['criteria_name']]) ? count($questionsData[$criteria['criteria_name']]) : 0;
+                                    $questionCount = isset($questionsData[$criteria['name']]) ? count($questionsData[$criteria['name']]) : 0;
                                     echo " ({$questionCount} questions)";
                                     ?>
                                 </option>

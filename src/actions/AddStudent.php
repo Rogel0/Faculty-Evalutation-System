@@ -3,7 +3,8 @@ session_start();
 include_once('../config/database.php');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $student_id = $_POST['student_id'] ?? '';
+    // gather form values
+    $student_id_input = $_POST['student_id'] ?? ''; // optional student identifier
     $firstname = $_POST['firstname'] ?? '';
     $lastname = $_POST['lastname'] ?? '';
     $middlename = $_POST['middlename'] ?? '';
@@ -12,35 +13,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $birthdate = $_POST['birthdate'] ?? '';
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
+    $subjects = $_POST['subject_id'] ?? [];
+    $teachers = $_POST['teacher_id'] ?? [];
     $created_at = date('Y-m-d H:i:s');
 
-    // Check if student_id already exists
-    $checkStmt = $conn->prepare("SELECT id FROM tbluser_students WHERE student_id = ? LIMIT 1");
-    $checkStmt->bind_param("s", $student_id);
-    $checkStmt->execute();
-    $checkStmt->store_result();
-    if ($checkStmt->num_rows > 0) {
-        // Student ID exists
-        $_SESSION['error'] = 'Student added failed!';
-        header("Location: " . $_SERVER['HTTP_REFERER']);
+    // Basic validation: username must be unique
+    $ucheck = $conn->prepare("SELECT id FROM users WHERE username = ? LIMIT 1");
+    $ucheck->bind_param('s', $username);
+    $ucheck->execute();
+    $ucheck->store_result();
+    if ($ucheck->num_rows > 0) {
+        $_SESSION['error'] = 'Username already exists.';
+        header('Location: ' . $_SERVER['HTTP_REFERER']);
         exit();
     }
-    $checkStmt->close();
+    $ucheck->close();
 
     // Hash password
     $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-    // Prepare and execute insert
-    $stmt = $conn->prepare("INSERT INTO tbluser_students (student_id, firstname, lastname, middlename, course, email, birthdate, username, password, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("ssssisssss", $student_id, $firstname, $lastname, $middlename, $course, $email, $birthdate, $username, $hashed_password, $created_at);
+    // Insert into users table as a student
+    $insertUser = $conn->prepare("INSERT INTO users (username, password, firstname, lastname, middlename, email, birthdate, course, user_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'student', ?)");
+    $insertUser->bind_param('sssssssss', $username, $hashed_password, $firstname, $lastname, $middlename, $email, $birthdate, $course, $created_at);
 
-    if ($stmt->execute()) {
-        $_SESSION['success'] = 'Student added successfully!';
-        header("Location: " . $_SERVER['HTTP_REFERER']);;
-        exit();
-    } else {
-        $_SESSION['error'] = 'Student added failed!';
-        header("Location: " . $_SERVER['HTTP_REFERER']);
+    if (!$insertUser->execute()) {
+        $_SESSION['error'] = 'Failed to create student account: ' . $conn->error;
+        header('Location: ' . $_SERVER['HTTP_REFERER']);
         exit();
     }
+
+    $student_user_id = $conn->insert_id;
+    $insertUser->close();
+
+    // Determine active school year id
+    $school_year_id = null;
+    $syRes = $conn->query("SELECT id FROM school_years WHERE is_active = 1 LIMIT 1");
+    if ($syRes && $row = $syRes->fetch_assoc()) {
+        $school_year_id = (int)$row['id'];
+    } else {
+        $syRes2 = $conn->query("SELECT id FROM school_years ORDER BY id DESC LIMIT 1");
+        if ($syRes2 && $row2 = $syRes2->fetch_assoc()) $school_year_id = (int)$row2['id'];
+    }
+
+    // Insert enrollments if we have pairs and a school year
+    if (!empty($subjects) && !empty($teachers) && $school_year_id !== null) {
+        $enrollStmt = $conn->prepare("INSERT INTO student_enrollments (student_id, subject_id, teacher_id, school_year_id) VALUES (?, ?, ?, ?)");
+        for ($i = 0; $i < count($subjects); $i++) {
+            $sub = intval($subjects[$i]);
+            $teach = intval($teachers[$i] ?? 0);
+            if ($sub > 0 && $teach > 0) {
+                $enrollStmt->bind_param('iiii', $student_user_id, $sub, $teach, $school_year_id);
+                $enrollStmt->execute();
+            }
+        }
+        $enrollStmt->close();
+    } else if ($school_year_id === null) {
+        $_SESSION['warning'] = 'Student created but no active school year found; enrollments were not created.';
+    }
+
+    $_SESSION['success'] = 'Student added successfully!';
+    header('Location: ' . $_SERVER['HTTP_REFERER']);
+    exit();
 }

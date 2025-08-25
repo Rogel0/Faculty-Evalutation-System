@@ -1,10 +1,7 @@
 <?php
-// Get criteria and questions data
-include('../config/database.php');
-
 // Get criteria for dropdown
 $criteriaOptions = [];
-$criteriaQuery = "SELECT id, criteria_name FROM tblstudent_criteria ORDER BY criteria_name";
+$criteriaQuery = "SELECT id, name FROM criteria WHERE evaluator_type = 'student' ORDER BY name";
 $criteriaResult = $conn->query($criteriaQuery);
 if ($criteriaResult) {
     while ($row = $criteriaResult->fetch_assoc()) {
@@ -14,14 +11,15 @@ if ($criteriaResult) {
 
 // Get existing questions grouped by criteria
 $questionsData = [];
-$questionsQuery = "SELECT q.id, q.question_text, q.criteria_id, c.criteria_name 
-                   FROM tblstudent_questionnaires q 
-                   LEFT JOIN tblstudent_criteria c ON q.criteria_id = c.id 
-                   ORDER BY c.criteria_name, q.id";
+$questionsQuery = "SELECT q.id, q.question_text, q.criteria_id, c.name 
+                   FROM questionnaires q 
+                   LEFT JOIN criteria c ON q.criteria_id = c.id 
+                   WHERE c.evaluator_type = 'student'
+                   ORDER BY c.name, q.id";
 $questionsResult = $conn->query($questionsQuery);
 if ($questionsResult) {
     while ($row = $questionsResult->fetch_assoc()) {
-        $questionsData[$row['criteria_name']][] = $row;
+        $questionsData[$row['name']][] = $row;
     }
 }
 ?>
@@ -47,28 +45,49 @@ if ($questionsResult) {
                 <!-- Criteria Selection -->
                 <div>
                     <label for="qn-criteria" class="block text-sm font-medium text-gray-700 mb-2">Criteria</label>
-                    <div class="relative">
+                    <div class="relative flex items-center gap-2">
                         <select name="qn-criteria" id="qn-criteria" required
                             class="w-full px-4 py-3 bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-colors appearance-none">
                             <option value="">Please select here</option>
                             <?php foreach ($criteriaOptions as $criteria): ?>
                                 <option value="<?php echo $criteria['id']; ?>">
-                                    <?php echo htmlspecialchars($criteria['criteria_name']); ?>
+                                    <?php echo htmlspecialchars($criteria['name']); ?>
                                     <?php
-                                    // Show count of existing questions
-                                    $questionCount = isset($questionsData[$criteria['criteria_name']]) ? count($questionsData[$criteria['criteria_name']]) : 0;
+                                    $questionCount = isset($questionsData[$criteria['name']]) ? count($questionsData[$criteria['name']]) : 0;
                                     echo " ({$questionCount} questions)";
                                     ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </div>
+                        <!-- Minimal Add Criteria Button -->
+                        <button type="button" onclick="document.getElementById('addCriteriaModal').style.display='block'" class="ml-2 px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs" title="Add Criteria">+
+                        </button>
                     </div>
                     <p class="text-xs text-gray-500 mt-1">Select existing criteria to add more questions to it</p>
+                </div>
+
+
+                <!-- Improved Modal for Adding Criteria -->
+                <div id="addCriteriaModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);z-index:1000;" onclick="if(event.target==this)this.style.display='none'">
+                    <div style="background:#fff;padding:2.5rem 2rem;border-radius:16px;max-width:420px;width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.18);margin:10vh auto;position:relative;">
+                        <button type="button" onclick="document.getElementById('addCriteriaModal').style.display='none'" style="position:absolute;top:1rem;right:1rem;background:transparent;border:none;font-size:1.5rem;line-height:1;color:#888;cursor:pointer;">&times;</button>
+                        <h3 class="text-xl font-bold mb-4 text-gray-800 text-center">Add Criteria</h3>
+                        <form action="../actions/AddCriteria.php" method="POST">
+                            <input type="hidden" name="evaluator_type" value="student">
+                            <div class="mb-4">
+                                <label for="criteria-name" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                <input type="text" name="criteria-name" id="criteria-name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500">
+                            </div>
+                            <div class="mb-4">
+                                <label for="criteria-description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                <textarea name="criteria-description" id="criteria-description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"></textarea>
+                            </div>
+                            <div class="flex justify-end gap-2 mt-2">
+                                <button type="button" onclick="document.getElementById('addCriteriaModal').style.display='none'" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Cancel</button>
+                                <button type="submit" class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 font-semibold">Add</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
 
                 <!-- Question Input -->
