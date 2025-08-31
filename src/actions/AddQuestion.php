@@ -13,7 +13,7 @@ if (isset($_POST['submitQuestionBtn'])) {
     }
 
 
-    $insertQuestionQuery = "INSERT INTO tblstudent_questionnaires (criteria_id, question_text, created_at) VALUES ('$criteria_id', '$questionText', NOW())";
+    $insertQuestionQuery = "INSERT INTO questionnaires (criteria_id, question_text, created_at) VALUES ('$criteria_id', '$questionText', NOW())";
 
     if ($conn->query($insertQuestionQuery)) {
         $_SESSION['success'] = 'Question added successfully!';

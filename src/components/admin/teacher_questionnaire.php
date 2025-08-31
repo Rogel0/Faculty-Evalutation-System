@@ -50,7 +50,7 @@ if ($questionsResult) {
                 <!-- Criteria Selection -->
                 <div>
                     <label for="qn-criteria" class="block text-sm font-medium text-gray-700 mb-2">Criteria</label>
-                    <div class="relative">
+                    <div class="relative flex items-center">
                         <select name="qn-criteria" id="qn-criteria" required
                             class="w-full px-4 py-3 bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-colors appearance-none">
                             <option value="">Please select here</option>
@@ -58,18 +58,14 @@ if ($questionsResult) {
                                 <option value="<?php echo $criteria['id']; ?>">
                                     <?php echo htmlspecialchars($criteria['name']); ?>
                                     <?php
-                                    // Show count of existing questions
                                     $questionCount = isset($questionsData[$criteria['name']]) ? count($questionsData[$criteria['name']]) : 0;
                                     echo " ({$questionCount} questions)";
                                     ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </div>
+                        <button type="button" onclick="document.getElementById('addCriteriaModal').style.display='block'" class="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs" title="Add Criteria">+
+                        </button>
                     </div>
                     <p class="text-xs text-gray-500 mt-1">Select existing criteria to add more questions to it</p>
                 </div>
@@ -90,6 +86,8 @@ if ($questionsResult) {
                 </button>
             </form>
         </div>
+
+        <?php include('modal/add_criteria_teacher_modal.php') ?>
 
         <!-- Evaluation Questionnaire Preview -->
         <div class="lg:col-span-2 bg-white rounded-lg shadow-md p-6 h-[75vh]">
