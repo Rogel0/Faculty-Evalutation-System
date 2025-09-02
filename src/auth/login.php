@@ -30,7 +30,7 @@ if ($user = mysqli_fetch_assoc($result)) {
                 header('Location: ../router/admin.php?module=dashboard');
                 break;
             case 'student':
-                header('Location: ../router/student.php?module=dashboard');
+                header('Location: ../router/student.php?module=evaluate_teacher');
                 break;
             case 'teacher':
                 header('Location: ../router/teacher.php?module=dashboard');

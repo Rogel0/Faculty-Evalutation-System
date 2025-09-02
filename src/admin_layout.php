@@ -21,7 +21,6 @@ if (isset($_SESSION['errorLogin'])) {
 </head>
 
 <body>
-
     <div class="flex h-screen bg-gray-100 overflow-y-hidden">
         <?php include('components/admin/sidebar.php'); ?>
 
@@ -37,7 +36,6 @@ if (isset($_SESSION['errorLogin'])) {
             </main>
         </div>
     </div>
-
 </body>
 
 <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
