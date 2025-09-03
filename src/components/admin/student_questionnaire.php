@@ -1,10 +1,7 @@
 <?php
-// Get criteria and questions data
-include('../config/database.php');
-
 // Get criteria for dropdown
 $criteriaOptions = [];
-$criteriaQuery = "SELECT id, criteria_name FROM tblcriteria ORDER BY criteria_name";
+$criteriaQuery = "SELECT id, name FROM criteria WHERE evaluator_type = 'student' ORDER BY name";
 $criteriaResult = $conn->query($criteriaQuery);
 if ($criteriaResult) {
     while ($row = $criteriaResult->fetch_assoc()) {
@@ -14,29 +11,16 @@ if ($criteriaResult) {
 
 // Get existing questions grouped by criteria
 $questionsData = [];
-$questionsQuery = "SELECT q.id, q.question_text, q.criteria_id, c.criteria_name 
-                   FROM tblquestionnaires q 
-                   LEFT JOIN tblcriteria c ON q.criteria_id = c.id 
-                   ORDER BY c.criteria_name, q.id";
+$questionsQuery = "SELECT q.id, q.question_text, q.criteria_id, c.name 
+                   FROM questionnaires q 
+                   LEFT JOIN criteria c ON q.criteria_id = c.id 
+                   WHERE c.evaluator_type = 'student'
+                   ORDER BY c.name, q.id";
 $questionsResult = $conn->query($questionsQuery);
 if ($questionsResult) {
     while ($row = $questionsResult->fetch_assoc()) {
-        $questionsData[$row['criteria_name']][] = $row;
+        $questionsData[$row['name']][] = $row;
     }
-}
-
-// Check for session messages
-$success_message = '';
-$error_message = '';
-
-if (isset($_SESSION['success_message'])) {
-    $success_message = $_SESSION['success_message'];
-    unset($_SESSION['success_message']);
-}
-
-if (isset($_SESSION['error_message'])) {
-    $error_message = $_SESSION['error_message'];
-    unset($_SESSION['error_message']);
 }
 ?>
 
@@ -57,34 +41,30 @@ if (isset($_SESSION['error_message'])) {
         <div class="bg-gray-100 rounded-lg p-6 shadow-sm">
             <h2 class="text-lg font-semibold text-gray-800 mb-6">Question Form</h2>
 
-            <!-- Regular form submission - NO AJAX -->
             <form action="../actions/AddQuestion.php" method="POST" class="space-y-6">
                 <!-- Criteria Selection -->
                 <div>
                     <label for="qn-criteria" class="block text-sm font-medium text-gray-700 mb-2">Criteria</label>
-                    <div class="relative">
+                    <div class="relative flex items-center">
                         <select name="qn-criteria" id="qn-criteria" required
                             class="w-full px-4 py-3 bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-colors appearance-none">
                             <option value="">Please select here</option>
                             <?php foreach ($criteriaOptions as $criteria): ?>
                                 <option value="<?php echo $criteria['id']; ?>">
-                                    <?php echo htmlspecialchars($criteria['criteria_name']); ?>
+                                    <?php echo htmlspecialchars($criteria['name']); ?>
                                     <?php
-                                    // Show count of existing questions
-                                    $questionCount = isset($questionsData[$criteria['criteria_name']]) ? count($questionsData[$criteria['criteria_name']]) : 0;
+                                    $questionCount = isset($questionsData[$criteria['name']]) ? count($questionsData[$criteria['name']]) : 0;
                                     echo " ({$questionCount} questions)";
                                     ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </div>
+                        <button type="button" onclick="document.getElementById('addCriteriaModal').style.display='block'" class="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs" title="Add Criteria">+
+                        </button>
                     </div>
                     <p class="text-xs text-gray-500 mt-1">Select existing criteria to add more questions to it</p>
                 </div>
+
 
                 <!-- Question Input -->
                 <div>
@@ -102,6 +82,8 @@ if (isset($_SESSION['error_message'])) {
                 </button>
             </form>
         </div>
+
+        <?php include('modal/add_criteria_student_modal.php') ?>
 
         <!-- Evaluation Questionnaire Preview -->
         <div class="lg:col-span-2 bg-white rounded-lg shadow-md p-6 h-[75vh]">

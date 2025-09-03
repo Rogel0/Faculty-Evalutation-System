@@ -2,11 +2,9 @@
 session_start();
 include('config/database.php');
 $pageTitle = "Login - Faculty Evaluation System";
-
-
-
 include('auth/sessionCheck.php');
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -17,7 +15,6 @@ include('auth/sessionCheck.php');
     <link rel="stylesheet" href="styles/loading.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css" />
     <title><?php echo $pageTitle; ?></title>
-
 </head>
 
 <body class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-200">
@@ -144,21 +141,21 @@ include('auth/sessionCheck.php');
             </div>
         </div>
     </div>
-
     <div id="messageContainer" class="fixed top-4 right-4 z-50"></div>
-    <?php if (isset($_SESSION['error'])): ?>
-        <script>
-            showToast("<?php echo $_SESSION['error']; ?>", "error");
-        </script>
-        <?php unset($_SESSION['error']); ?>
-    <?php endif; ?>
-    <?php if (isset($_SESSION['success'])): ?>
-        <script>
-            showToast("<?php echo $_SESSION['success']; ?>", "success");
-        </script>
-        <?php unset($_SESSION['success']); ?>
-    <?php endif; ?>
 </body>
 <script src="scripts/loading.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+<script src="/faculty_evaluation/src/scripts/toast.js"></script>
+<script>
+    <?php if (isset($_SESSION['error'])): ?>
+        showToast(" <?php echo $_SESSION['error']; ?>", "error");
+        <?php unset($_SESSION['error']); ?>
+    <?php endif; ?>
+
+    <?php if (isset($_SESSION['success'])): ?>
+        showToast("<?php echo $_SESSION['success']; ?>", "success");
+        <?php unset($_SESSION['success']); ?>
+    <?php endif; ?>
+</script>
 
 </html>

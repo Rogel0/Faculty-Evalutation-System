@@ -3,8 +3,8 @@
 // include('../auth/sessionCheck.php');
 
 // Get the requested module from the URL, default to 'home'
-$module = $_GET['module'] ?? 'home';
-$content = "../components/student/{$module}.php";
+$module = $_GET['module'] ?? 'evaluate_teacher';
+$content = "../views/student/{$module}.php";
 
 // Check if the requested module file exists
 if (!file_exists($content)) {
