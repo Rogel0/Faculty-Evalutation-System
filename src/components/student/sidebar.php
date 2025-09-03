@@ -1,8 +1,20 @@
 <?php
+include('../config/database.php');
 $currentModule = $_GET['module'] ?? 'dashboard';
-$user_name = $_SESSION['student_name'] ?? 'Student';
-$student_id = $_SESSION['student_id'] ?? 'ID: Unknown';
-$first_initial = strtoupper(substr($user_name, 0, 1));
+$user_id = $_SESSION['userID'] ?? null;
+$user_name = 'Student';
+$student_id = 'ID: Unknown';
+$first_initial = 'S';
+
+if ($user_id) {
+    $sql = "SELECT firstname, lastname, id FROM users WHERE id = $user_id AND user_type = 'student' LIMIT 1";
+    $result = $conn->query($sql);
+    if ($row = $result->fetch_assoc()) {
+        $user_name = $row['firstname'] . ' ' . $row['lastname'];
+        $student_id = $row['id'];
+        $first_initial = strtoupper(substr($row['firstname'], 0, 1));
+    }
+}
 ?>
 
 <!-- Sidebar -->
