@@ -1,5 +1,5 @@
 <?php
-include('../config/database.php');
+include(__DIR__ . '/../../config/database.php');
 $currentModule = $_GET['module'] ?? 'dashboard';
 $user_id = $_SESSION['userID'] ?? null;
 $user_name = 'Student';
@@ -17,8 +17,7 @@ if ($user_id) {
 }
 ?>
 
-<!-- Sidebar -->
-<!-- Hamburger for mobile, always visible for initial toggle -->
+
 <button id="studentSidebarToggle" class="lg:hidden fixed top-4 left-4 z-50 bg-blue-600 text-white p-2 rounded-full shadow-lg focus:outline-none">
     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -96,14 +95,12 @@ if ($user_id) {
             sidebar.classList.remove('-translate-x-full');
             overlay.classList.remove('hidden');
             document.body.classList.add('overflow-hidden');
-            toggleBtn.style.display = 'none';
         }
 
         function closeSidebar() {
             sidebar.classList.add('-translate-x-full');
             overlay.classList.add('hidden');
             document.body.classList.remove('overflow-hidden');
-            toggleBtn.style.display = 'block';
         }
         toggleBtn.addEventListener('click', openSidebar);
         closeBtn.addEventListener('click', closeSidebar);
@@ -112,13 +109,9 @@ if ($user_id) {
             if (e.key === 'Escape') closeSidebar();
         });
         window.addEventListener('resize', function() {
-            if (window.innerWidth >= 1024) closeSidebar();
+            if (window.innerWidth >= 1024) {
+                closeSidebar();
+            }
         });
-        // Initial state: show hamburger if sidebar is closed
-        if (sidebar.classList.contains('-translate-x-full')) {
-            toggleBtn.style.display = 'block';
-        } else {
-            toggleBtn.style.display = 'none';
-        }
     });
 </script>
