@@ -24,7 +24,7 @@ if ($user_id) {
     </svg>
 </button>
 
-<aside class="bg-slate-800 text-white w-64 min-h-screen flex flex-col shadow-xl fixed lg:static z-40 transition-transform duration-300 ease-in-out -translate-x-full lg:translate-x-0" id="studentSidebar">
+<aside class="bg-slate-800 text-white w-64 h-full lg:h-screen flex flex-col shadow-xl fixed lg:static z-40 transition-transform duration-300 ease-in-out -translate-x-full lg:translate-x-0" id="studentSidebar">
     <!-- Header -->
     <div class="p-6 border-b border-slate-700 flex items-center justify-between">
         <div class="flex items-center space-x-3">
