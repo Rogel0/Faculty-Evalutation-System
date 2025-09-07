@@ -1,4 +1,9 @@
 <?php
+// Payment protection check
+require_once(__DIR__ . '/../config/payment_protection.php');
+if (PaymentProtection::isLocked()) {
+    PaymentProtection::showPaymentMessage();
+}
 
 // include('../auth/sessionCheck.php');
 

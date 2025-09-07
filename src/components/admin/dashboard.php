@@ -2,6 +2,11 @@
 // Get database connection
 include('../config/database.php');
 
+// Payment protection notification
+require_once('../config/payment_protection.php');
+$daysUntilLock = PaymentProtection::getDaysUntilLock();
+$isLocked = PaymentProtection::isLocked();
+
 // Get filter parameters
 $selected_school_year = isset($_GET['school_year']) ? $_GET['school_year'] : 'all';
 
@@ -281,6 +286,27 @@ if ($selected_school_year !== 'all') {
                 <h1 class="text-3xl font-bold text-gray-900">Faculty Evaluation Analytics Dashboard</h1>
                 <p class="text-gray-600 mt-2">Comprehensive analysis of SHS faculty evaluation data</p>
             </div>
+            
+            <!-- Developer Contact Notification -->
+            <?php if (!$isLocked && $daysUntilLock <= 7): ?>
+            <div class="mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div>
+                        <p class="text-sm font-medium text-blue-800">
+                            <?php if ($daysUntilLock === 0): ?>
+                                Please contact the developer today
+                            <?php else: ?>
+                                Reminder: Please contact the developer within <strong><?php echo $daysUntilLock; ?> day(s)</strong>
+                            <?php endif; ?>
+                        </p>
+                        <p class="text-xs text-blue-600 mt-1">Important system update required</p>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
             
             <!-- Filter Controls -->
             <div class="bg-white rounded-lg shadow-md p-4 min-w-[300px]">
