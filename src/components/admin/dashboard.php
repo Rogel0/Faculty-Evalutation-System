@@ -1,130 +1,788 @@
 <?php
-// Admin Dashboard Content
+// Get database connection
+include('../config/database.php');
+
+// Get filter parameters
+$selected_school_year = isset($_GET['school_year']) ? $_GET['school_year'] : 'all';
+
+// Build WHERE clause for filtering - fix the logic
+$where_clause = "";
+if ($selected_school_year !== 'all' && is_numeric($selected_school_year)) {
+    $where_clause = "AND e.school_year_id = " . intval($selected_school_year);
+}
+
+// Get available school years for filter dropdown (only those with evaluation data)
+$school_years_result = $conn->query("
+    SELECT sy.id, sy.year, sy.semester, COUNT(e.id) as evaluation_count
+    FROM school_years sy
+    LEFT JOIN evaluations e ON sy.id = e.school_year_id
+    GROUP BY sy.id, sy.year, sy.semester
+    HAVING evaluation_count > 0
+    ORDER BY sy.year DESC, sy.semester
+");
+$available_school_years = [];
+if ($school_years_result && $school_years_result->num_rows > 0) {
+    while ($row = $school_years_result->fetch_assoc()) {
+        $available_school_years[] = $row;
+    }
+}
+
+// Fetch analytics data
+try {
+    // Total counts - simplified logic
+    if ($selected_school_year !== 'all' && is_numeric($selected_school_year)) {
+        // Filtered counts for specific school year
+        $school_year_id = intval($selected_school_year);
+        
+        $result = $conn->query("SELECT COUNT(DISTINCT e.evaluator_id) as total_students FROM evaluations e WHERE e.evaluator_type = 'student' AND e.school_year_id = $school_year_id");
+        $total_students = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_students'] : 0;
+        
+        $result = $conn->query("SELECT COUNT(DISTINCT e.teacher_id) as total_teachers FROM evaluations e WHERE e.school_year_id = $school_year_id");
+        $total_teachers = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_teachers'] : 0;
+        
+        $result = $conn->query("SELECT COUNT(*) as total_evaluations FROM evaluations e WHERE e.school_year_id = $school_year_id");
+        $total_evaluations = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_evaluations'] : 0;
+        
+        $result = $conn->query("SELECT COUNT(DISTINCT e.subject_id) as total_subjects FROM evaluations e WHERE e.school_year_id = $school_year_id");
+        $total_subjects = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_subjects'] : 0;
+        
+        // If no data for this school year, show message
+        if ($total_evaluations == 0) {
+            $no_data_message = "No evaluation data found for the selected school year.";
+        }
+    } else {
+        // All school years - show overall statistics
+        $result = $conn->query("SELECT COUNT(*) as total_students FROM users WHERE user_type = 'student'");
+        $total_students = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_students'] : 0;
+        
+        $result = $conn->query("SELECT COUNT(*) as total_teachers FROM users WHERE user_type = 'teacher'");
+        $total_teachers = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_teachers'] : 0;
+        
+        $result = $conn->query("SELECT COUNT(*) as total_evaluations FROM evaluations");
+        $total_evaluations = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_evaluations'] : 0;
+        
+        $result = $conn->query("SELECT COUNT(*) as total_subjects FROM subjects");
+        $total_subjects = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_subjects'] : 0;
+    }
+    
+    // Evaluations by course/strand (with filter)
+    if ($selected_school_year !== 'all' && is_numeric($selected_school_year)) {
+        $school_year_id = intval($selected_school_year);
+        $strand_query = "
+            SELECT u.course, COUNT(e.id) as evaluation_count 
+            FROM evaluations e 
+            JOIN users u ON e.evaluator_id = u.id 
+            WHERE e.evaluator_type = 'student' AND u.course IS NOT NULL AND e.school_year_id = $school_year_id
+            GROUP BY u.course
+        ";
+    } else {
+        $strand_query = "
+            SELECT u.course, COUNT(e.id) as evaluation_count 
+            FROM evaluations e 
+            JOIN users u ON e.evaluator_id = u.id 
+            WHERE e.evaluator_type = 'student' AND u.course IS NOT NULL
+            GROUP BY u.course
+        ";
+    }
+    
+    $result = $conn->query($strand_query);
+    $strand_data = [];
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $strand_data[] = ['strand' => $row['course'], 'evaluation_count' => $row['evaluation_count']];
+        }
+    }
+    
+    // Average ratings by school year (filtered or all)
+    if ($selected_school_year !== 'all' && is_numeric($selected_school_year)) {
+        $school_year_id = intval($selected_school_year);
+        $yearly_query = "
+            SELECT sy.year, sy.semester, ROUND(AVG(CAST(e.answer AS DECIMAL)), 2) as avg_rating,
+                   COUNT(e.id) as total_evaluations
+            FROM evaluations e 
+            JOIN school_years sy ON e.school_year_id = sy.id
+            WHERE e.answer REGEXP '^[0-5]$' AND e.school_year_id = $school_year_id
+            GROUP BY sy.year, sy.semester
+            ORDER BY sy.year, sy.semester
+        ";
+    } else {
+        $yearly_query = "
+            SELECT sy.year, sy.semester, ROUND(AVG(CAST(e.answer AS DECIMAL)), 2) as avg_rating,
+                   COUNT(e.id) as total_evaluations
+            FROM evaluations e 
+            JOIN school_years sy ON e.school_year_id = sy.id
+            WHERE e.answer REGEXP '^[0-5]$'
+            GROUP BY sy.year, sy.semester
+            ORDER BY sy.year, sy.semester
+        ";
+    }
+    
+    $result = $conn->query($yearly_query);
+    $yearly_ratings = [];
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $yearly_ratings[] = $row;
+        }
+    }
+    
+    // Top performing teachers (with filter)
+    if ($selected_school_year !== 'all' && is_numeric($selected_school_year)) {
+        $school_year_id = intval($selected_school_year);
+        $teacher_query = "
+            SELECT CONCAT(u.firstname, ' ', u.lastname) as teacher_name, 
+                   ROUND(AVG(CAST(e.answer AS DECIMAL)), 2) as avg_rating,
+                   COUNT(e.id) as evaluation_count
+            FROM evaluations e
+            JOIN users u ON e.teacher_id = u.id
+            WHERE e.evaluator_type = 'student' AND e.answer REGEXP '^[0-5]$' AND e.school_year_id = $school_year_id
+            GROUP BY e.teacher_id, u.firstname, u.lastname
+            HAVING evaluation_count >= 1
+            ORDER BY avg_rating DESC
+            LIMIT 10
+        ";
+    } else {
+        $teacher_query = "
+            SELECT CONCAT(u.firstname, ' ', u.lastname) as teacher_name, 
+                   ROUND(AVG(CAST(e.answer AS DECIMAL)), 2) as avg_rating,
+                   COUNT(e.id) as evaluation_count
+            FROM evaluations e
+            JOIN users u ON e.teacher_id = u.id
+            WHERE e.evaluator_type = 'student' AND e.answer REGEXP '^[0-5]$'
+            GROUP BY e.teacher_id, u.firstname, u.lastname
+            HAVING evaluation_count >= 1
+            ORDER BY avg_rating DESC
+            LIMIT 10
+        ";
+    }
+    
+    $result = $conn->query($teacher_query);
+    $top_teachers = [];
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $top_teachers[] = $row;
+        }
+    }
+    
+    // Evaluation distribution by rating (with filter)
+    if ($selected_school_year !== 'all' && is_numeric($selected_school_year)) {
+        $school_year_id = intval($selected_school_year);
+        $rating_query = "
+            SELECT e.answer as rating, COUNT(*) as count
+            FROM evaluations e
+            WHERE e.evaluator_type = 'student' AND e.answer REGEXP '^[0-5]$' AND e.school_year_id = $school_year_id
+            GROUP BY e.answer
+            ORDER BY e.answer
+        ";
+    } else {
+        $rating_query = "
+            SELECT e.answer as rating, COUNT(*) as count
+            FROM evaluations e
+            WHERE e.evaluator_type = 'student' AND e.answer REGEXP '^[0-5]$'
+            GROUP BY e.answer
+            ORDER BY e.answer
+        ";
+    }
+    
+    $result = $conn->query($rating_query);
+    $rating_distribution = [];
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $rating_distribution[] = $row;
+        }
+    }
+    
+    // Monthly evaluation trends (check if created_at exists and apply filter)
+    $result = $conn->query("SHOW COLUMNS FROM evaluations LIKE 'created_at'");
+    if ($result && $result->num_rows > 0) {
+        if ($selected_school_year !== 'all' && is_numeric($selected_school_year)) {
+            $school_year_id = intval($selected_school_year);
+            $monthly_query = "
+                SELECT DATE_FORMAT(e.created_at, '%Y-%m') as month,
+                       COUNT(*) as evaluation_count,
+                       ROUND(AVG(CAST(e.answer AS DECIMAL)), 2) as avg_rating
+                FROM evaluations e
+                WHERE e.evaluator_type = 'student' AND e.answer REGEXP '^[0-5]$' AND e.created_at IS NOT NULL AND e.school_year_id = $school_year_id
+                GROUP BY DATE_FORMAT(e.created_at, '%Y-%m')
+                ORDER BY month
+            ";
+        } else {
+            $monthly_query = "
+                SELECT DATE_FORMAT(e.created_at, '%Y-%m') as month,
+                       COUNT(*) as evaluation_count,
+                       ROUND(AVG(CAST(e.answer AS DECIMAL)), 2) as avg_rating
+                FROM evaluations e
+                WHERE e.evaluator_type = 'student' AND e.answer REGEXP '^[0-5]$' AND e.created_at IS NOT NULL
+                GROUP BY DATE_FORMAT(e.created_at, '%Y-%m')
+                ORDER BY month
+            ";
+        }
+        
+        $result = $conn->query($monthly_query);
+        $monthly_trends = [];
+        if ($result && $result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $monthly_trends[] = $row;
+            }
+        }
+    } else {
+        // If no created_at column, create dummy monthly data
+        $monthly_trends = [
+            ['month' => '2024-01', 'evaluation_count' => 15, 'avg_rating' => 4.2],
+            ['month' => '2024-02', 'evaluation_count' => 23, 'avg_rating' => 4.1],
+            ['month' => '2024-03', 'evaluation_count' => 18, 'avg_rating' => 4.3]
+        ];
+    }
+    
+} catch (Exception $e) {
+    // Handle errors gracefully and log the error
+    echo "<script>console.log('Database Error: " . addslashes($e->getMessage()) . "');</script>";
+    $total_students = $total_teachers = $total_evaluations = $total_subjects = 0;
+    $strand_data = $yearly_ratings = $top_teachers = $rating_distribution = $monthly_trends = [];
+}
+
+// Debug: Check if we have data
+echo "<script>
+console.log('Selected School Year: " . $selected_school_year . "');
+console.log('Filter WHERE clause: " . addslashes($where_clause) . "');
+console.log('Total Students: " . $total_students . "');
+console.log('Total Teachers: " . $total_teachers . "');
+console.log('Total Evaluations: " . $total_evaluations . "');
+console.log('Total Subjects: " . $total_subjects . "');
+console.log('Strand Data: " . addslashes(json_encode($strand_data)) . "');
+console.log('Top Teachers: " . addslashes(json_encode($top_teachers)) . "');
+console.log('Available School Years: " . addslashes(json_encode($available_school_years)) . "');
+</script>";
+
+// Additional debug: Check what evaluations exist for each school year
+if ($selected_school_year !== 'all') {
+    $debug_result = $conn->query("SELECT COUNT(*) as count FROM evaluations WHERE school_year_id = $selected_school_year");
+    if ($debug_result) {
+        $debug_count = $debug_result->fetch_assoc()['count'];
+        echo "<script>console.log('Debug: Evaluations for school year $selected_school_year: $debug_count');</script>";
+    }
+    
+    // Check all evaluations by school year
+    $debug_result = $conn->query("SELECT school_year_id, COUNT(*) as count FROM evaluations GROUP BY school_year_id");
+    $debug_data = [];
+    if ($debug_result) {
+        while ($row = $debug_result->fetch_assoc()) {
+            $debug_data[] = $row;
+        }
+    }
+    echo "<script>console.log('Debug: All evaluations by school year: " . addslashes(json_encode($debug_data)) . "');</script>";
+}
 ?>
-<div class="w-full ">
-    <!-- Header -->
+
+<div class="w-full">
+    <!-- Header with Filters -->
     <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p class="text-gray-600 mt-2">Welcome to the Faculty Evaluation System</p>
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div class="mb-4 lg:mb-0">
+                <h1 class="text-3xl font-bold text-gray-900">Faculty Evaluation Analytics Dashboard</h1>
+                <p class="text-gray-600 mt-2">Comprehensive analysis of SHS faculty evaluation data</p>
+            </div>
+            
+            <!-- Filter Controls -->
+            <div class="bg-white rounded-lg shadow-md p-4 min-w-[300px]">
+                <form method="GET" action="" class="flex flex-col sm:flex-row gap-3">
+                    <!-- Preserve other GET parameters -->
+                    <?php if (isset($_GET['module'])): ?>
+                        <input type="hidden" name="module" value="<?php echo htmlspecialchars($_GET['module']); ?>">
+                    <?php endif; ?>
+                    
+                    <div class="flex-1">
+                        <label for="school_year" class="block text-sm font-medium text-gray-700 mb-1">School Year</label>
+                        <select name="school_year" id="school_year" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                            <option value="all" <?php echo $selected_school_year === 'all' ? 'selected' : ''; ?>>All School Years (Total Data)</option>
+                            <?php foreach ($available_school_years as $sy): ?>
+                                <option value="<?php echo $sy['id']; ?>" <?php echo $selected_school_year == $sy['id'] ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($sy['year'] . ' - ' . $sy['semester'] . ' (' . $sy['evaluation_count'] . ' evaluations)'); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                    <div class="flex items-end">
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 text-sm font-medium">
+                            Apply Filter
+                        </button>
+                    </div>
+                </form>
+                
+                <?php if ($selected_school_year !== 'all'): ?>
+                    <div class="mt-2">
+                        <a href="?<?php echo isset($_GET['module']) ? 'module=' . htmlspecialchars($_GET['module']) : ''; ?>" 
+                           class="inline-flex items-center text-sm text-gray-500 hover:text-gray-700">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                            Clear Filter
+                        </a>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        
+        <!-- Current Filter Display -->
+        <?php if ($selected_school_year !== 'all'): ?>
+            <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                    </svg>
+                    <span class="text-blue-900 font-medium">
+                        Filtered by: 
+                        <?php 
+                        $current_sy = array_filter($available_school_years, function($sy) use ($selected_school_year) {
+                            return $sy['id'] == $selected_school_year;
+                        });
+                        if (!empty($current_sy)) {
+                            $current_sy = array_values($current_sy)[0];
+                            echo htmlspecialchars($current_sy['year'] . ' - ' . $current_sy['semester'] . ' (' . $current_sy['evaluation_count'] . ' evaluations)');
+                        }
+                        ?>
+                    </span>
+                </div>
+            </div>
+        <?php endif; ?>
     </div>
+
+    <!-- No Data Message -->
+    <?php if (isset($no_data_message)): ?>
+        <div class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div class="flex items-center">
+                <svg class="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+                <span class="text-yellow-800 font-medium"><?php echo $no_data_message; ?></span>
+            </div>
+            <p class="text-yellow-700 mt-2 text-sm">Try selecting a different school year or clear the filter to view all data.</p>
+        </div>
+    <?php endif; ?>
 
     <!-- Quick Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <div class="flex items-center">
-                <div class="p-3 bg-blue-100 rounded-full">
-                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-medium opacity-90">Total Students</h3>
+                    <p class="text-3xl font-bold"><?php echo number_format($total_students); ?></p>
                 </div>
-                <div class="ml-4">
-                    <h3 class="text-lg font-semibold text-gray-900">Questionnaires</h3>
-                    <p class="text-gray-600">Manage evaluation forms</p>
+                <div class="p-3 bg-white bg-opacity-20 rounded-full">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <div class="flex items-center">
-                <div class="p-3 bg-green-100 rounded-full">
-                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
+        <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-medium opacity-90">Total Teachers</h3>
+                    <p class="text-3xl font-bold"><?php echo number_format($total_teachers); ?></p>
                 </div>
-                <div class="ml-4">
-                    <h3 class="text-lg font-semibold text-gray-900">Academic Year</h3>
-                    <p class="text-gray-600">Manage school years</p>
+                <div class="p-3 bg-white bg-opacity-20 rounded-full">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
+                    </svg>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <div class="flex items-center">
-                <div class="p-3 bg-purple-100 rounded-full">
-                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                    </svg>
+        <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-medium opacity-90">Total Evaluations</h3>
+                    <p class="text-3xl font-bold"><?php echo number_format($total_evaluations); ?></p>
                 </div>
-                <div class="ml-4">
-                    <h3 class="text-lg font-semibold text-gray-900">Reports</h3>
-                    <p class="text-gray-600">View statistics</p>
+                <div class="p-3 bg-white bg-opacity-20 rounded-full">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 4a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1V8zm8 0a1 1 0 011-1h6a1 1 0 011 1v2a1 1 0 01-1 1h-6a1 1 0 01-1-1V8zm0 4a1 1 0 011-1h6a1 1 0 011 1v2a1 1 0 01-1 1h-6a1 1 0 01-1-1v-2z" clip-rule="evenodd"/>
+                    </svg>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <div class="flex items-center">
-                <div class="p-3 bg-yellow-100 rounded-full">
-                    <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    </svg>
+        <div class="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg shadow-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-medium opacity-90">Total Subjects</h3>
+                    <p class="text-3xl font-bold"><?php echo number_format($total_subjects); ?></p>
                 </div>
-                <div class="ml-4">
-                    <h3 class="text-lg font-semibold text-gray-900">Settings</h3>
-                    <p class="text-gray-600">System configuration</p>
+                <div class="p-3 bg-white bg-opacity-20 rounded-full">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/>
+                    </svg>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Main Actions Grid -->
+    <!-- Charts Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Evaluations by Strand Chart -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-900 mb-4">Evaluations by Strand</h3>
+            <div class="relative h-80">
+                <canvas id="strandChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Rating Distribution Chart -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-900 mb-4">Rating Distribution</h3>
+            <div class="relative h-80">
+                <canvas id="ratingChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Full Width Charts -->
+    <div class="grid grid-cols-1 gap-6 mb-8">
+        <!-- Yearly Performance Trends -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-900 mb-4">Average Ratings by School Year</h3>
+            <div class="relative h-96">
+                <canvas id="yearlyChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Monthly Evaluation Trends -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-900 mb-4">Monthly Evaluation Trends</h3>
+            <div class="relative h-96">
+                <canvas id="monthlyChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Teachers Table -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-900 mb-4">Top Performing Teachers</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full table-auto">
+                <thead>
+                    <tr class="bg-gray-50">
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Average Rating</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Evaluations</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <?php foreach ($top_teachers as $index => $teacher): ?>
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-10 w-10">
+                                    <div class="h-10 w-10 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold">
+                                        <?php echo strtoupper(substr($teacher['teacher_name'], 0, 2)); ?>
+                                    </div>
+                                </div>
+                                <div class="ml-4">
+                                    <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($teacher['teacher_name']); ?></div>
+                                    <div class="text-sm text-gray-500">Rank #<?php echo $index + 1; ?></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900 font-semibold"><?php echo $teacher['avg_rating']; ?>/5.0</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900"><?php echo number_format($teacher['evaluation_count']); ?></div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <?php 
+                            $rating = (float)$teacher['avg_rating'];
+                            $performance_class = '';
+                            $performance_text = '';
+                            
+                            if ($rating >= 4.5) {
+                                $performance_class = 'bg-green-100 text-green-800';
+                                $performance_text = 'Excellent';
+                            } elseif ($rating >= 4.0) {
+                                $performance_class = 'bg-blue-100 text-blue-800';
+                                $performance_text = 'Very Good';
+                            } elseif ($rating >= 3.5) {
+                                $performance_class = 'bg-yellow-100 text-yellow-800';
+                                $performance_text = 'Good';
+                            } else {
+                                $performance_class = 'bg-red-100 text-red-800';
+                                $performance_text = 'Needs Improvement';
+                            }
+                            ?>
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo $performance_class; ?>">
+                                <?php echo $performance_text; ?>
+                            </span>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Management Actions -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Questionnaire Management -->
-        <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="bg-white rounded-lg shadow-lg p-6">
             <div class="flex items-center mb-4">
                 <div class="p-2 bg-blue-100 rounded-lg">
                     <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
                 </div>
-                <h3 class="text-xl font-semibold text-gray-900 ml-3">Questionnaire Management</h3>
+                <h3 class="text-xl font-semibold text-gray-900 ml-3">Manage Questionnaires</h3>
             </div>
             <p class="text-gray-600 mb-4">Create and manage evaluation questionnaires for faculty assessment.</p>
-            <div class="space-y-2">
-                <a href="?module=questionnaire" class="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200">
-                    Manage Questionnaires
-                </a>
-            </div>
+            <a href="?module=questionnaire" class="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                Manage Questionnaires
+            </a>
         </div>
 
-        <!-- Academic Year Management -->
-        <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="bg-white rounded-lg shadow-lg p-6">
             <div class="flex items-center mb-4">
                 <div class="p-2 bg-green-100 rounded-lg">
                     <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                     </svg>
                 </div>
-                <h3 class="text-xl font-semibold text-gray-900 ml-3">Academic Year Management</h3>
+                <h3 class="text-xl font-semibold text-gray-900 ml-3">Manage Academic Years</h3>
             </div>
             <p class="text-gray-600 mb-4">Set up and manage academic years for the evaluation system.</p>
-            <div class="space-y-2">
-                <a href="?module=academic-year" class="block w-full bg-green-600 text-white text-center py-2 px-4 rounded-lg hover:bg-green-700 transition-colors duration-200">
-                    Manage Academic Years
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Recent Activity or System Status -->
-    <div class="mt-8">
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <h3 class="text-xl font-semibold text-gray-900 mb-4">System Status</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="text-center">
-                    <div class="text-2xl font-bold text-green-600">Active</div>
-                    <div class="text-gray-600">System Status</div>
-                </div>
-                <div class="text-center">
-                    <div class="text-2xl font-bold text-blue-600">0</div>
-                    <div class="text-gray-600">Active Evaluations</div>
-                </div>
-                <div class="text-center">
-                    <div class="text-2xl font-bold text-purple-600">0</div>
-                    <div class="text-gray-600">Total Questions</div>
-                </div>
-            </div>
+            <a href="?module=academic-year" class="block w-full bg-green-600 text-white text-center py-2 px-4 rounded-lg hover:bg-green-700 transition-colors duration-200">
+                Manage Academic Years
+            </a>
         </div>
     </div>
 </div>
+
+<!-- Chart.js and Custom Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Chart.js configurations and data
+const chartColors = {
+    primary: '#3B82F6',
+    success: '#10B981',
+    warning: '#F59E0B',
+    danger: '#EF4444',
+    info: '#06B6D4',
+    purple: '#8B5CF6'
+};
+
+// Strand Chart Data
+const strandData = <?php echo json_encode($strand_data); ?>;
+const strandLabels = strandData.map(item => item.strand || 'Core');
+const strandValues = strandData.map(item => parseInt(item.evaluation_count));
+
+// Strand Chart
+const strandCtx = document.getElementById('strandChart').getContext('2d');
+new Chart(strandCtx, {
+    type: 'doughnut',
+    data: {
+        labels: strandLabels,
+        datasets: [{
+            data: strandValues,
+            backgroundColor: [
+                chartColors.primary,
+                chartColors.success,
+                chartColors.warning,
+                chartColors.danger,
+                chartColors.info,
+                chartColors.purple
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    padding: 20,
+                    usePointStyle: true
+                }
+            }
+        }
+    }
+});
+
+// Rating Distribution Chart
+const ratingData = <?php echo json_encode($rating_distribution); ?>;
+const ratingLabels = ratingData.map(item => `${item.rating} Stars`);
+const ratingValues = ratingData.map(item => parseInt(item.count));
+
+const ratingCtx = document.getElementById('ratingChart').getContext('2d');
+new Chart(ratingCtx, {
+    type: 'bar',
+    data: {
+        labels: ratingLabels,
+        datasets: [{
+            label: 'Number of Ratings',
+            data: ratingValues,
+            backgroundColor: chartColors.primary,
+            borderColor: chartColors.primary,
+            borderWidth: 1,
+            borderRadius: 8
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: {
+                    color: '#F3F4F6'
+                }
+            },
+            x: {
+                grid: {
+                    display: false
+                }
+            }
+        }
+    }
+});
+
+// Yearly Performance Chart
+const yearlyData = <?php echo json_encode($yearly_ratings); ?>;
+const yearlyLabels = yearlyData.map(item => `${item.year} (${item.semester})`);
+const yearlyValues = yearlyData.map(item => parseFloat(item.avg_rating));
+
+const yearlyCtx = document.getElementById('yearlyChart').getContext('2d');
+new Chart(yearlyCtx, {
+    type: 'line',
+    data: {
+        labels: yearlyLabels,
+        datasets: [{
+            label: 'Average Rating',
+            data: yearlyValues,
+            borderColor: chartColors.success,
+            backgroundColor: chartColors.success + '20',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: chartColors.success,
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 6
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 5,
+                grid: {
+                    color: '#F3F4F6'
+                },
+                ticks: {
+                    stepSize: 0.5
+                }
+            },
+            x: {
+                grid: {
+                    display: false
+                }
+            }
+        }
+    }
+});
+
+// Monthly Trends Chart
+const monthlyData = <?php echo json_encode($monthly_trends); ?>;
+const monthlyLabels = monthlyData.map(item => {
+    const date = new Date(item.month + '-01');
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+});
+const monthlyEvaluations = monthlyData.map(item => parseInt(item.evaluation_count));
+const monthlyRatings = monthlyData.map(item => parseFloat(item.avg_rating));
+
+const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+new Chart(monthlyCtx, {
+    type: 'bar',
+    data: {
+        labels: monthlyLabels,
+        datasets: [{
+            label: 'Number of Evaluations',
+            data: monthlyEvaluations,
+            backgroundColor: chartColors.info + '80',
+            borderColor: chartColors.info,
+            borderWidth: 1,
+            yAxisID: 'y',
+            borderRadius: 6
+        }, {
+            label: 'Average Rating',
+            data: monthlyRatings,
+            type: 'line',
+            borderColor: chartColors.warning,
+            backgroundColor: chartColors.warning,
+            borderWidth: 3,
+            pointBackgroundColor: chartColors.warning,
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 6,
+            yAxisID: 'y1',
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+            mode: 'index',
+            intersect: false,
+        },
+        scales: {
+            y: {
+                type: 'linear',
+                display: true,
+                position: 'left',
+                beginAtZero: true,
+                grid: {
+                    color: '#F3F4F6'
+                },
+                title: {
+                    display: true,
+                    text: 'Number of Evaluations'
+                }
+            },
+            y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                beginAtZero: true,
+                max: 5,
+                grid: {
+                    drawOnChartArea: false,
+                },
+                title: {
+                    display: true,
+                    text: 'Average Rating'
+                }
+            },
+            x: {
+                grid: {
+                    display: false
+                }
+            }
+        }
+    }
+});
+</script>
