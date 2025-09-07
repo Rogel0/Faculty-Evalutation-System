@@ -4,14 +4,16 @@ $currentModule = $_GET['module'] ?? 'dashboard';
 $user_id = $_SESSION['userID'] ?? null;
 $user_name = 'Student';
 $student_id = 'ID: Unknown';
+$student_strand = 'Unknown Strand';
 $first_initial = 'S';
 
 if ($user_id) {
-    $sql = "SELECT firstname, lastname, id FROM users WHERE id = $user_id AND user_type = 'student' LIMIT 1";
+    $sql = "SELECT firstname, lastname, id, course FROM users WHERE id = $user_id AND user_type = 'student' LIMIT 1";
     $result = $conn->query($sql);
     if ($row = $result->fetch_assoc()) {
         $user_name = $row['firstname'] . ' ' . $row['lastname'];
         $student_id = $row['id'];
+        $student_strand = $row['course']; // This will be the strand (STEM, ABM, HUMSS, GAS, ICT)
         $first_initial = strtoupper(substr($row['firstname'], 0, 1));
     }
 }
@@ -33,8 +35,8 @@ if ($user_id) {
             </div>
             <div>
                 <h2 class="text-lg font-bold text-white"><?php echo htmlspecialchars($user_name); ?></h2>
-                <p class="text-xs text-slate-300">Student Portal</p>
-                <p class="text-xs text-slate-400">ID: <?php echo htmlspecialchars($student_id); ?></p>
+                <p class="text-xs text-slate-300">Senior High School</p>
+                <p class="text-xs text-slate-400">ID: <?php echo htmlspecialchars($student_id); ?> | <?php echo htmlspecialchars($student_strand ?? 'Unknown'); ?> Strand</p>
             </div>
         </div>
         <!-- Close button for mobile -->
