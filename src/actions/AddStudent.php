@@ -29,12 +29,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $ucheck->close();
 
-    // Hash password
-    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-
-    // Insert into users table as a student
+    // Insert into users table as a student (using plain text password)
     $insertUser = $conn->prepare("INSERT INTO users (username, password, firstname, lastname, middlename, email, birthdate, course, user_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'student', ?)");
-    $insertUser->bind_param('sssssssss', $username, $hashed_password, $firstname, $lastname, $middlename, $email, $birthdate, $course, $created_at);
+    $insertUser->bind_param('sssssssss', $username, $password, $firstname, $lastname, $middlename, $email, $birthdate, $course, $created_at);
 
     if (!$insertUser->execute()) {
         $_SESSION['error'] = 'Failed to create student account: ' . $conn->error;

@@ -7,3 +7,109 @@
   transition: opacity 0.3s ease-in-out;
   background-color: black;
 }
+
+/* Login Page Background Animations - Enhanced */
+@keyframes float-slow {
+  0%, 100% { 
+    transform: translateY(0px) translateX(0px) scale(1); 
+    opacity: 0.7;
+  }
+  50% { 
+    transform: translateY(-25px) translateX(15px) scale(1.05); 
+    opacity: 0.9;
+  }
+}
+
+@keyframes float-delayed {
+  0%, 100% { 
+    transform: translateY(0px) translateX(0px) scale(1); 
+    opacity: 0.6;
+  }
+  50% { 
+    transform: translateY(20px) translateX(-20px) scale(0.95); 
+    opacity: 0.8;
+  }
+}
+
+@keyframes float {
+  0%, 100% { 
+    transform: translateY(0px) translateX(0px) rotate(0deg); 
+    opacity: 0.5;
+  }
+  50% { 
+    transform: translateY(-15px) translateX(10px) rotate(5deg); 
+    opacity: 0.7;
+  }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.1); }
+  to { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes spin-reverse {
+  from { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(-180deg) scale(0.9); }
+  to { transform: rotate(-360deg) scale(1); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { 
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.8;
+    transform: scale(1.1);
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 8s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float-delayed 10s ease-in-out infinite;
+  animation-delay: 2s;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+  animation-delay: 1s;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 25s ease-in-out infinite;
+}
+
+.animate-spin-reverse {
+  animation: spin-reverse 20s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+/* Background Image Styles - Enhanced */
+.bg-lyceum-building {
+  background-image: url('../assets/images/login_bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* Text Enhancement */
+.text-shadow-strong {
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7), 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.text-shadow-glow {
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.5), 0 0 40px rgba(255, 255, 255, 0.3);
+}
+
+/* Backdrop blur for better layering */
+.backdrop-blur-custom {
+  backdrop-filter: blur(2px) brightness(0.9);
+}

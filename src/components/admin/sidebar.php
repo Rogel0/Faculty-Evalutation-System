@@ -73,7 +73,7 @@ $first_initial = strtoupper(substr($_SESSION['firstname'] ?? $_SESSION['username
         </a>
 
         <!-- Add Teacher -->
-        <a href="?module=add_teacher"
+        <!-- <a href="?module=add_teacher"
             class="group flex items-center space-x-2 p-4 rounded-lg transition-all duration-200 <?php echo ($currentModule === 'add_teacher') ? 'bg-yellow-500 text-gray-900 shadow-lg' : 'text-slate-300 hover:bg-slate-600 hover:text-white'; ?>">
             <div class="w-5 h-5 flex items-center justify-center">
                 <svg fill="currentColor" viewBox="0 0 20 20" class="w-5 h-5">
@@ -82,7 +82,7 @@ $first_initial = strtoupper(substr($_SESSION['firstname'] ?? $_SESSION['username
                 </svg>
             </div>
             <span class="font-medium">Add Teacher</span>
-        </a>
+        </a> -->
 
         </a>
 

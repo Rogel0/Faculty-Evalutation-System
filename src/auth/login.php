@@ -13,7 +13,7 @@ mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
 
 if ($user = mysqli_fetch_assoc($result)) {
-    // For now, check plain text password. Replace with password_verify if using hashes.
+    // Check plain text password
     if ($user['password'] === $password) {
         $_SESSION['userID'] = $user['id'];
         $_SESSION['username'] = $user['username'] ?? null;
