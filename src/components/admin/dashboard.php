@@ -391,7 +391,6 @@ try {
             $peer_coverage_data[] = $row;
         }
     }
-
 } catch (Exception $e) {
     // Handle errors gracefully and log the error
     echo "<script>console.log('Database Error: " . addslashes($e->getMessage()) . "');</script>";
@@ -1080,7 +1079,7 @@ try {
     const deptLabels = departmentPeerData.map(item => item.department);
     const deptPeerCounts = departmentPeerData.map(item => parseInt(item.peer_evaluation_count));
     const deptPeerRatings = departmentPeerData.map(item => parseFloat(item.avg_peer_rating));
-    
+
     const departmentPeerCtx = document.getElementById('departmentPeerChart').getContext('2d');
     new Chart(departmentPeerCtx, {
         type: 'bar',
