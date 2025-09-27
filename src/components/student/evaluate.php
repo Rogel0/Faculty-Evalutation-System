@@ -41,6 +41,18 @@ if ($tableCheck->num_rows > 0) {
     $stmt->execute();
     $result = $stmt->get_result();
     while ($row = $result->fetch_assoc()) {
+        // Check if this teacher-subject combination has already been evaluated
+        $checkQuery = "SELECT COUNT(*) as count 
+                       FROM evaluations 
+                       WHERE evaluator_id = ? AND teacher_id = ? AND subject_id = ? AND evaluator_type = 'student'";
+        $checkStmt = $conn->prepare($checkQuery);
+        $checkStmt->bind_param('iii', $student_id, $row['teacher_id'], $row['subject_id']);
+        $checkStmt->execute();
+        $checkResult = $checkStmt->get_result();
+        $checkRow = $checkResult->fetch_assoc();
+        $row['already_evaluated'] = $checkRow['count'] > 0;
+        $checkStmt->close();
+
         $enrollments[] = $row;
         if ($row['id'] == $selected_enrollment_id) {
             $selected_enrollment = $row;
@@ -191,10 +203,19 @@ if ($selected_enrollment) {
                                                 Teacher: <?php echo htmlspecialchars($enroll['firstname'] . ' ' . $enroll['lastname']); ?>
                                             </p>
                                         </div>
-                                        <a href="?module=evaluate_teacher&enrollment_id=<?php echo $enroll['id']; ?>"
-                                            class="w-full sm:w-auto text-center px-4 md:px-4 py-3 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold rounded-md transition-colors duration-200 shadow-sm text-sm">
-                                            Evaluate
-                                        </a>
+                                        <?php if ($enroll['already_evaluated']): ?>
+                                            <div class="w-full sm:w-auto text-center px-4 md:px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-md transition-colors duration-200 shadow-sm text-sm cursor-not-allowed">
+                                                <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                </svg>
+                                                Evaluated
+                                            </div>
+                                        <?php else: ?>
+                                            <a href="?module=evaluate_teacher&enrollment_id=<?php echo $enroll['id']; ?>"
+                                                class="w-full sm:w-auto text-center px-4 md:px-4 py-3 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold rounded-md transition-colors duration-200 shadow-sm text-sm">
+                                                Evaluate
+                                            </a>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             <?php endforeach; ?>

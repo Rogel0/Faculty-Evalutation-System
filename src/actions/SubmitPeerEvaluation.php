@@ -10,6 +10,8 @@ header('Content-Type: application/json');
 
 include_once('../config/database.php');
 
+
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'message' => 'Invalid request method']);
     exit;
@@ -23,7 +25,6 @@ if (!isset($_SESSION['userID']) || $_SESSION['user_type'] !== 'teacher') {
 
 $evaluator_id = $_SESSION['userID'];
 $teacher_id = $_POST['teacher_id'] ?? '';
-$subject_id = $_POST['subject_id'] ?? '';
 $evaluator_type = $_POST['evaluator_type'] ?? '';
 
 // Get current active school year
@@ -35,6 +36,15 @@ if ($schoolYearResult && $schoolYearResult->num_rows > 0) {
     $current_school_year = $schoolYearRow['id'];
 }
 $school_year_id = $_POST['school_year_id'] ?? $current_school_year;
+
+// Get a dummy subject ID for peer evaluations (use the first available subject)
+$dummy_subject_id = 1; // Default fallback
+$subjectQuery = "SELECT id FROM subjects ORDER BY id ASC LIMIT 1";
+$subjectResult = $conn->query($subjectQuery);
+if ($subjectResult && $subjectResult->num_rows > 0) {
+    $subjectRow = $subjectResult->fetch_assoc();
+    $dummy_subject_id = $subjectRow['id'];
+}
 
 // Validate required fields
 if (empty($teacher_id) || $evaluator_type !== 'teacher') {
@@ -67,20 +77,21 @@ if ($dept_result['evaluator_dept'] !== $dept_result['teacher_dept']) {
     exit;
 }
 
-// Check if evaluation already exists
+// Check if evaluation already exists (peer evaluation - check for any subject with teacher evaluator_type)
 $existing_check = "
     SELECT id FROM evaluations 
-    WHERE evaluator_id = ? AND teacher_id = ? AND subject_id = ? 
+    WHERE evaluator_id = ? AND teacher_id = ? 
     AND evaluator_type = 'teacher' AND school_year_id = ?
+    AND subject_id = ?
 ";
 
 $stmt = $conn->prepare($existing_check);
-$stmt->bind_param('iiii', $evaluator_id, $teacher_id, $subject_id, $school_year_id);
+$stmt->bind_param('iiii', $evaluator_id, $teacher_id, $school_year_id, $dummy_subject_id);
 $stmt->execute();
 $existing = $stmt->get_result();
 
 if ($existing->num_rows > 0) {
-    echo json_encode(['success' => false, 'message' => 'You have already evaluated this teacher for this subject']);
+    echo json_encode(['success' => false, 'message' => 'You have already evaluated this colleague']);
     exit;
 }
 
@@ -97,13 +108,15 @@ if (empty($questionnaire_ids)) {
     exit;
 }
 
+
+
 // Start transaction
 $conn->begin_transaction();
 
 try {
     $created_at = date('Y-m-d H:i:s');
 
-    // Insert each question's answer as a separate evaluation record
+    // Insert each question's answer as a separate evaluation record (peer evaluation uses dummy subject_id)
     $insert_stmt = $conn->prepare("
         INSERT INTO evaluations (evaluator_id, evaluator_type, teacher_id, subject_id, school_year_id, questionnaire_id, answer, created_at) 
         VALUES (?, 'teacher', ?, ?, ?, ?, ?, ?)
@@ -124,10 +137,10 @@ try {
         }
 
         $insert_stmt->bind_param(
-            'iiiiss',
+            'iiiiiis',
             $evaluator_id,
             $teacher_id,
-            $subject_id,
+            $dummy_subject_id,
             $school_year_id,
             $questionnaire_id,
             $answer,

@@ -3,7 +3,7 @@
                <button type="button" onclick="document.getElementById('addCriteriaModal').style.display='none'" style="position:absolute;top:1rem;right:1rem;background:transparent;border:none;font-size:1.5rem;line-height:1;color:#888;cursor:pointer;">&times;</button>
                <h3 class="text-xl font-bold mb-4 text-gray-800 text-center">Add Criteria</h3>
                <form action="../actions/AddCriteriaStudent.php" method="POST">
-                   <input type="hidden" name="evaluator_type" value="student">
+                   <input type="hidden" name="evaluator_type" value="teacher">
                    <div class="mb-4">
                        <label for="criteria-name" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
                        <input type="text" name="criteria-name" id="criteria-name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500">

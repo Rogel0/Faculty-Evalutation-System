@@ -239,37 +239,7 @@ try {
     $strand_data = $yearly_ratings = $top_teachers = $rating_distribution = $monthly_trends = [];
 }
 
-// Debug: Check if we have data
-echo "<script>
-console.log('Selected School Year: " . $selected_school_year . "');
-console.log('Filter WHERE clause: " . addslashes($where_clause) . "');
-console.log('Total Students: " . $total_students . "');
-console.log('Total Teachers: " . $total_teachers . "');
-console.log('Total Evaluations: " . $total_evaluations . "');
-console.log('Total Subjects: " . $total_subjects . "');
-console.log('Strand Data: " . addslashes(json_encode($strand_data)) . "');
-console.log('Top Teachers: " . addslashes(json_encode($top_teachers)) . "');
-console.log('Available School Years: " . addslashes(json_encode($available_school_years)) . "');
-</script>";
 
-// Additional debug: Check what evaluations exist for each school year
-if ($selected_school_year !== 'all') {
-    $debug_result = $conn->query("SELECT COUNT(*) as count FROM evaluations WHERE school_year_id = $selected_school_year");
-    if ($debug_result) {
-        $debug_count = $debug_result->fetch_assoc()['count'];
-        echo "<script>console.log('Debug: Evaluations for school year $selected_school_year: $debug_count');</script>";
-    }
-
-    // Check all evaluations by school year
-    $debug_result = $conn->query("SELECT school_year_id, COUNT(*) as count FROM evaluations GROUP BY school_year_id");
-    $debug_data = [];
-    if ($debug_result) {
-        while ($row = $debug_result->fetch_assoc()) {
-            $debug_data[] = $row;
-        }
-    }
-    echo "<script>console.log('Debug: All evaluations by school year: " . addslashes(json_encode($debug_data)) . "');</script>";
-}
 ?>
 
 <div class="w-full">

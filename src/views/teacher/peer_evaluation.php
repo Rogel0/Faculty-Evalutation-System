@@ -39,7 +39,30 @@ include('../config/database.php');
         $stmt->bind_param('si', $department, $teacher_id);
         $stmt->execute();
         $result = $stmt->get_result();
+
+        // Get dummy subject ID for peer evaluations
+        $dummy_subject_id = 1;
+        $subjectQuery = "SELECT id FROM subjects ORDER BY id ASC LIMIT 1";
+        $subjectResult = $conn->query($subjectQuery);
+        if ($subjectResult && $subjectResult->num_rows > 0) {
+            $subjectRow = $subjectResult->fetch_assoc();
+            $dummy_subject_id = $subjectRow['id'];
+        }
+
         while ($row = $result->fetch_assoc()) {
+            // Check if this colleague has already been evaluated
+            $checkQuery = "SELECT COUNT(*) as count 
+                           FROM evaluations 
+                           WHERE evaluator_id = ? AND teacher_id = ? AND evaluator_type = 'teacher' 
+                           AND subject_id = ?";
+            $checkStmt = $conn->prepare($checkQuery);
+            $checkStmt->bind_param('iii', $teacher_id, $row['id'], $dummy_subject_id);
+            $checkStmt->execute();
+            $checkResult = $checkStmt->get_result();
+            $checkRow = $checkResult->fetch_assoc();
+            $row['already_evaluated'] = $checkRow['count'] > 0;
+            $checkStmt->close();
+
             $colleagues[] = $row;
             if ($row['id'] == $selected_colleague_id) {
                 $selected_colleague = $row;
@@ -51,13 +74,23 @@ include('../config/database.php');
         $alreadyEvaluated = false;
         $evaluationInfo = null;
         if ($selected_colleague) {
+            // Get dummy subject ID for peer evaluations
+            $dummy_subject_id = 1;
+            $subjectQuery = "SELECT id FROM subjects ORDER BY id ASC LIMIT 1";
+            $subjectResult = $conn->query($subjectQuery);
+            if ($subjectResult && $subjectResult->num_rows > 0) {
+                $subjectRow = $subjectResult->fetch_assoc();
+                $dummy_subject_id = $subjectRow['id'];
+            }
+
             $checkQuery = "SELECT e.created_at, u.firstname, u.lastname 
                            FROM evaluations e
                            LEFT JOIN users u ON e.teacher_id = u.id
                            WHERE e.evaluator_id = ? AND e.teacher_id = ? AND e.evaluator_type = 'teacher' 
+                           AND e.subject_id = ?
                            LIMIT 1";
             $checkStmt = $conn->prepare($checkQuery);
-            $checkStmt->bind_param('ii', $teacher_id, $selected_colleague['id']);
+            $checkStmt->bind_param('iii', $teacher_id, $selected_colleague['id'], $dummy_subject_id);
             $checkStmt->execute();
             $checkResult = $checkStmt->get_result();
 
@@ -241,10 +274,19 @@ include('../config/database.php');
                                                         Position: <?php echo htmlspecialchars($colleague['position'] ?? 'Teacher'); ?> • <?php echo htmlspecialchars($colleague['department']); ?>
                                                     </p>
                                                 </div>
-                                                <a href="?module=peer_evaluation&colleague_id=<?php echo $colleague['id']; ?>"
-                                                    class="w-full sm:w-auto text-center px-4 md:px-4 py-3 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold rounded-md transition-colors duration-200 shadow-sm text-sm">
-                                                    Evaluate
-                                                </a>
+                                                <?php if ($colleague['already_evaluated']): ?>
+                                                    <div class="w-full sm:w-auto text-center px-4 md:px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-md transition-colors duration-200 shadow-sm text-sm cursor-not-allowed">
+                                                        <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                        </svg>
+                                                        Evaluated
+                                                    </div>
+                                                <?php else: ?>
+                                                    <a href="?module=peer_evaluation&colleague_id=<?php echo $colleague['id']; ?>"
+                                                        class="w-full sm:w-auto text-center px-4 md:px-4 py-3 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold rounded-md transition-colors duration-200 shadow-sm text-sm">
+                                                        Evaluate
+                                                    </a>
+                                                <?php endif; ?>
                                             </div>
                                         </div>
                                     <?php endforeach; ?>
