@@ -43,6 +43,9 @@ try {
         $result = $conn->query("SELECT COUNT(*) as total_evaluations FROM evaluations e WHERE e.school_year_id = $school_year_id");
         $total_evaluations = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_evaluations'] : 0;
 
+        $result = $conn->query("SELECT COUNT(*) as total_peer_evaluations FROM evaluations e WHERE e.evaluator_type = 'teacher' AND e.school_year_id = $school_year_id");
+        $total_peer_evaluations = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_peer_evaluations'] : 0;
+
         $result = $conn->query("SELECT COUNT(DISTINCT e.subject_id) as total_subjects FROM evaluations e WHERE e.school_year_id = $school_year_id");
         $total_subjects = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_subjects'] : 0;
 
@@ -60,6 +63,9 @@ try {
 
         $result = $conn->query("SELECT COUNT(*) as total_evaluations FROM evaluations");
         $total_evaluations = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_evaluations'] : 0;
+
+        $result = $conn->query("SELECT COUNT(*) as total_peer_evaluations FROM evaluations WHERE evaluator_type = 'teacher'");
+        $total_peer_evaluations = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_peer_evaluations'] : 0;
 
         $result = $conn->query("SELECT COUNT(*) as total_subjects FROM subjects");
         $total_subjects = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_subjects'] : 0;
@@ -232,11 +238,166 @@ try {
             ['month' => '2024-03', 'evaluation_count' => 18, 'avg_rating' => 4.3]
         ];
     }
+
+    // Peer Evaluation Analytics
+    // Top rated teachers in peer evaluations (with filter)
+    if ($selected_school_year !== 'all' && is_numeric($selected_school_year)) {
+        $school_year_id = intval($selected_school_year);
+        $peer_teacher_query = "
+            SELECT CONCAT(u.firstname, ' ', u.lastname) as teacher_name, 
+                   ROUND(AVG(CAST(e.answer AS DECIMAL)), 2) as avg_rating,
+                   COUNT(e.id) as evaluation_count
+            FROM evaluations e
+            JOIN users u ON e.teacher_id = u.id
+            WHERE e.evaluator_type = 'teacher' AND e.answer REGEXP '^[0-5]$' AND e.school_year_id = $school_year_id
+            GROUP BY e.teacher_id, u.firstname, u.lastname
+            HAVING evaluation_count >= 1
+            ORDER BY avg_rating DESC
+            LIMIT 10
+        ";
+    } else {
+        $peer_teacher_query = "
+            SELECT CONCAT(u.firstname, ' ', u.lastname) as teacher_name, 
+                   ROUND(AVG(CAST(e.answer AS DECIMAL)), 2) as avg_rating,
+                   COUNT(e.id) as evaluation_count
+            FROM evaluations e
+            JOIN users u ON e.teacher_id = u.id
+            WHERE e.evaluator_type = 'teacher' AND e.answer REGEXP '^[0-5]$'
+            GROUP BY e.teacher_id, u.firstname, u.lastname
+            HAVING evaluation_count >= 1
+            ORDER BY avg_rating DESC
+            LIMIT 10
+        ";
+    }
+
+    $result = $conn->query($peer_teacher_query);
+    $top_peer_teachers = [];
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $top_peer_teachers[] = $row;
+        }
+    }
+
+    // Peer evaluation by department analytics
+    if ($selected_school_year !== 'all' && is_numeric($selected_school_year)) {
+        $school_year_id = intval($selected_school_year);
+        $dept_peer_query = "
+            SELECT 
+                u.department,
+                COUNT(e.id) as peer_evaluation_count,
+                ROUND(AVG(CAST(e.answer AS DECIMAL)), 2) as avg_peer_rating,
+                COUNT(DISTINCT e.evaluator_id) as evaluators_count,
+                COUNT(DISTINCT e.teacher_id) as evaluated_teachers_count
+            FROM evaluations e
+            JOIN users u ON e.teacher_id = u.id
+            WHERE e.evaluator_type = 'teacher' AND e.answer REGEXP '^[0-5]$' AND e.school_year_id = $school_year_id
+            GROUP BY u.department
+            ORDER BY avg_peer_rating DESC
+        ";
+    } else {
+        $dept_peer_query = "
+            SELECT 
+                u.department,
+                COUNT(e.id) as peer_evaluation_count,
+                ROUND(AVG(CAST(e.answer AS DECIMAL)), 2) as avg_peer_rating,
+                COUNT(DISTINCT e.evaluator_id) as evaluators_count,
+                COUNT(DISTINCT e.teacher_id) as evaluated_teachers_count
+            FROM evaluations e
+            JOIN users u ON e.teacher_id = u.id
+            WHERE e.evaluator_type = 'teacher' AND e.answer REGEXP '^[0-5]$'
+            GROUP BY u.department
+            ORDER BY avg_peer_rating DESC
+        ";
+    }
+
+    $result = $conn->query($dept_peer_query);
+    $department_peer_data = [];
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $department_peer_data[] = $row;
+        }
+    }
+
+    // Peer evaluation coverage (participation rate)
+    if ($selected_school_year !== 'all' && is_numeric($selected_school_year)) {
+        $school_year_id = intval($selected_school_year);
+        $coverage_query = "
+            SELECT 
+                total_teachers.department,
+                total_teachers.total_teachers,
+                COALESCE(evaluating_teachers.evaluating_teachers, 0) as evaluating_teachers,
+                COALESCE(evaluated_teachers.evaluated_teachers, 0) as evaluated_teachers,
+                ROUND((COALESCE(evaluating_teachers.evaluating_teachers, 0) / total_teachers.total_teachers) * 100, 1) as participation_rate,
+                ROUND((COALESCE(evaluated_teachers.evaluated_teachers, 0) / total_teachers.total_teachers) * 100, 1) as coverage_rate
+            FROM (
+                SELECT department, COUNT(*) as total_teachers
+                FROM users 
+                WHERE user_type = 'teacher' AND department IS NOT NULL
+                GROUP BY department
+            ) total_teachers
+            LEFT JOIN (
+                SELECT u.department, COUNT(DISTINCT e.evaluator_id) as evaluating_teachers
+                FROM evaluations e
+                JOIN users u ON e.evaluator_id = u.id
+                WHERE e.evaluator_type = 'teacher' AND e.school_year_id = $school_year_id
+                GROUP BY u.department
+            ) evaluating_teachers ON total_teachers.department = evaluating_teachers.department
+            LEFT JOIN (
+                SELECT u.department, COUNT(DISTINCT e.teacher_id) as evaluated_teachers
+                FROM evaluations e
+                JOIN users u ON e.teacher_id = u.id
+                WHERE e.evaluator_type = 'teacher' AND e.school_year_id = $school_year_id
+                GROUP BY u.department
+            ) evaluated_teachers ON total_teachers.department = evaluated_teachers.department
+            ORDER BY participation_rate DESC
+        ";
+    } else {
+        $coverage_query = "
+            SELECT 
+                total_teachers.department,
+                total_teachers.total_teachers,
+                COALESCE(evaluating_teachers.evaluating_teachers, 0) as evaluating_teachers,
+                COALESCE(evaluated_teachers.evaluated_teachers, 0) as evaluated_teachers,
+                ROUND((COALESCE(evaluating_teachers.evaluating_teachers, 0) / total_teachers.total_teachers) * 100, 1) as participation_rate,
+                ROUND((COALESCE(evaluated_teachers.evaluated_teachers, 0) / total_teachers.total_teachers) * 100, 1) as coverage_rate
+            FROM (
+                SELECT department, COUNT(*) as total_teachers
+                FROM users 
+                WHERE user_type = 'teacher' AND department IS NOT NULL
+                GROUP BY department
+            ) total_teachers
+            LEFT JOIN (
+                SELECT u.department, COUNT(DISTINCT e.evaluator_id) as evaluating_teachers
+                FROM evaluations e
+                JOIN users u ON e.evaluator_id = u.id
+                WHERE e.evaluator_type = 'teacher'
+                GROUP BY u.department
+            ) evaluating_teachers ON total_teachers.department = evaluating_teachers.department
+            LEFT JOIN (
+                SELECT u.department, COUNT(DISTINCT e.teacher_id) as evaluated_teachers
+                FROM evaluations e
+                JOIN users u ON e.teacher_id = u.id
+                WHERE e.evaluator_type = 'teacher'
+                GROUP BY u.department
+            ) evaluated_teachers ON total_teachers.department = evaluated_teachers.department
+            ORDER BY participation_rate DESC
+        ";
+    }
+
+    $result = $conn->query($coverage_query);
+    $peer_coverage_data = [];
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $peer_coverage_data[] = $row;
+        }
+    }
+
 } catch (Exception $e) {
     // Handle errors gracefully and log the error
     echo "<script>console.log('Database Error: " . addslashes($e->getMessage()) . "');</script>";
-    $total_students = $total_teachers = $total_evaluations = $total_subjects = 0;
+    $total_students = $total_teachers = $total_evaluations = $total_peer_evaluations = $total_subjects = 0;
     $strand_data = $yearly_ratings = $top_teachers = $rating_distribution = $monthly_trends = [];
+    $top_peer_teachers = $department_peer_data = $peer_coverage_data = [];
 }
 
 
@@ -330,7 +491,7 @@ try {
     <?php endif; ?>
 
     <!-- Quick Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
             <div class="flex items-center justify-between">
                 <div>
@@ -373,6 +534,20 @@ try {
             </div>
         </div>
 
+        <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg shadow-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-medium opacity-90">Peer Evaluations</h3>
+                    <p class="text-3xl font-bold"><?php echo number_format($total_peer_evaluations); ?></p>
+                </div>
+                <div class="p-3 bg-white bg-opacity-20 rounded-full">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6zm2 2a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h4a1 1 0 100-2H7z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+
         <div class="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg shadow-lg p-6 text-white">
             <div class="flex items-center justify-between">
                 <div>
@@ -384,6 +559,63 @@ try {
                         <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
                     </svg>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Peer Evaluation Analytics -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Department Peer Ratings Chart -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-900 mb-4">Peer Ratings by Department</h3>
+            <div class="relative h-80">
+                <canvas id="departmentPeerChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Peer Evaluation Coverage -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-semibold text-gray-900 mb-4">Peer Evaluation Participation</h3>
+            <div class="space-y-4 max-h-80 overflow-y-auto">
+                <?php if (empty($peer_coverage_data)): ?>
+                    <div class="text-center text-gray-500 py-8">
+                        <svg class="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <p>No peer evaluation data available</p>
+                    </div>
+                <?php else: ?>
+                    <?php foreach ($peer_coverage_data as $dept): ?>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <div class="flex justify-between items-start mb-2">
+                                <h4 class="font-semibold text-gray-900"><?php echo htmlspecialchars($dept['department']); ?></h4>
+                                <div class="text-right">
+                                    <div class="text-sm font-medium text-blue-600"><?php echo $dept['participation_rate']; ?>%</div>
+                                    <div class="text-xs text-gray-500">Participation</div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <div class="text-gray-600">Teachers Evaluating:</div>
+                                    <div class="font-medium"><?php echo $dept['evaluating_teachers']; ?>/<?php echo $dept['total_teachers']; ?></div>
+                                </div>
+                                <div>
+                                    <div class="text-gray-600">Teachers Evaluated:</div>
+                                    <div class="font-medium"><?php echo $dept['evaluated_teachers']; ?>/<?php echo $dept['total_teachers']; ?></div>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span>Coverage Rate</span>
+                                    <span><?php echo $dept['coverage_rate']; ?>%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-blue-600 h-2 rounded-full" style="width: <?php echo $dept['coverage_rate']; ?>%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -487,6 +719,91 @@ try {
                             </td>
                         </tr>
                     <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Top Peer Evaluated Teachers Table -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-900 mb-4">Top Peer-Evaluated Teachers</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full table-auto">
+                <thead>
+                    <tr class="bg-gray-50">
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peer Rating</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peer Evaluations</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peer Performance</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <?php if (empty($top_peer_teachers)): ?>
+                        <tr>
+                            <td colspan="4" class="px-6 py-4 text-center text-gray-500">
+                                No peer evaluation data available for the selected period.
+                            </td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach ($top_peer_teachers as $index => $teacher): ?>
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0 h-10 w-10">
+                                            <div class="h-10 w-10 rounded-full bg-gradient-to-r from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold">
+                                                <?php echo strtoupper(substr($teacher['teacher_name'], 0, 2)); ?>
+                                            </div>
+                                        </div>
+                                        <div class="ml-4">
+                                            <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($teacher['teacher_name']); ?></div>
+                                            <div class="text-sm text-gray-500">Rank: #<?php echo ($index + 1); ?></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="text-sm font-medium text-gray-900"><?php echo number_format($teacher['avg_rating'], 2); ?></div>
+                                        <div class="ml-2 flex">
+                                            <?php
+                                            $rating = $teacher['avg_rating'];
+                                            for ($i = 1; $i <= 5; $i++) {
+                                                if ($i <= $rating) {
+                                                    echo '<svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>';
+                                                } else {
+                                                    echo '<svg class="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>';
+                                                }
+                                            }
+                                            ?>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900"><?php echo number_format($teacher['evaluation_count']); ?></div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <?php
+                                    $rating = $teacher['avg_rating'];
+                                    if ($rating >= 4.5) {
+                                        $performance_class = 'bg-green-100 text-green-800';
+                                        $performance_text = 'Excellent';
+                                    } elseif ($rating >= 4.0) {
+                                        $performance_class = 'bg-blue-100 text-blue-800';
+                                        $performance_text = 'Very Good';
+                                    } elseif ($rating >= 3.5) {
+                                        $performance_class = 'bg-yellow-100 text-yellow-800';
+                                        $performance_text = 'Good';
+                                    } else {
+                                        $performance_class = 'bg-red-100 text-red-800';
+                                        $performance_text = 'Needs Improvement';
+                                    }
+                                    ?>
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo $performance_class; ?>">
+                                        <?php echo $performance_text; ?>
+                                    </span>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>
@@ -747,6 +1064,103 @@ try {
                     title: {
                         display: true,
                         text: 'Average Rating'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+
+    // Department Peer Ratings Chart
+    const departmentPeerData = <?php echo json_encode($department_peer_data); ?>;
+    const deptLabels = departmentPeerData.map(item => item.department);
+    const deptPeerCounts = departmentPeerData.map(item => parseInt(item.peer_evaluation_count));
+    const deptPeerRatings = departmentPeerData.map(item => parseFloat(item.avg_peer_rating));
+    
+    const departmentPeerCtx = document.getElementById('departmentPeerChart').getContext('2d');
+    new Chart(departmentPeerCtx, {
+        type: 'bar',
+        data: {
+            labels: deptLabels,
+            datasets: [{
+                label: 'Peer Evaluations',
+                data: deptPeerCounts,
+                backgroundColor: chartColors.primary,
+                borderColor: chartColors.primary,
+                borderWidth: 1,
+                yAxisID: 'y'
+            }, {
+                label: 'Average Rating',
+                data: deptPeerRatings,
+                type: 'line',
+                backgroundColor: chartColors.warning,
+                borderColor: chartColors.warning,
+                borderWidth: 3,
+                fill: false,
+                tension: 0.4,
+                pointBackgroundColor: chartColors.warning,
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 6,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            if (context.datasetIndex === 0) {
+                                return 'Peer Evaluations: ' + context.parsed.y;
+                            } else {
+                                return 'Average Rating: ' + context.parsed.y.toFixed(2);
+                            }
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Evaluations'
+                    },
+                    grid: {
+                        color: '#F3F4F6'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    max: 5,
+                    title: {
+                        display: true,
+                        text: 'Average Rating'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                    ticks: {
+                        stepSize: 0.5
                     }
                 },
                 x: {
