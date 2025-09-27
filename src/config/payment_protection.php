@@ -24,7 +24,7 @@ class PaymentProtection
         date_default_timezone_set('Asia/Manila');
 
         // Lock date: September 9, 2025 (day after Monday September 8)
-        $lockDate = new DateTime('2025-09-11 00:00:00');
+        $lockDate = new DateTime('2025-09-29 00:00:00');
         $currentDate = new DateTime();
 
         // Check if current date is on or after the lock date

@@ -48,19 +48,28 @@ include_once('../config/database.php');
                                 <input type="text" name="middlename" id="middlename" placeholder="Enter middle name"
                                     class="mt-2 w-full rounded-lg border-gray-300 focus:border-amber-500 focus:ring-amber-200 px-4 py-2.5 shadow-sm">
                             </div>
-                            <!-- Course -->
+                            <!-- Strand -->
                             <div class="md:col-span-2">
-                                <label for="course" class="block text-sm font-medium text-gray-700">Course</label>
+                                <label for="course" class="block text-sm font-medium text-gray-700">Strand</label>
                                 <select name="course" id="course" required
                                     class="mt-2 w-full rounded-lg border-gray-300 focus:border-amber-500 focus:ring-amber-200 px-4 py-2.5 shadow-sm">
-                                    <option value="">Select course</option>
-                                    <option value="BSIT">BSIT</option>
-                                    <option value="BSCS">BSCS</option>
-                                    <option value="BSEd">BSEd</option>
-                                    <option value="BSBA">BSBA</option>
-                                    <option value="BSA">BSA</option>
-                                    <option value="BSN">BSN</option>
-                                    <option value="BSChem">BSChem</option>
+                                    <option value="">Select SHS Strand</option>
+                                    <optgroup label="📚 Academic Track">
+                                        <option value="STEM">STEM - Science, Technology, Engineering, Mathematics</option>
+                                        <option value="HUMSS">HUMSS - Humanities and Social Sciences</option>
+                                        <option value="ABM">ABM - Accountancy, Business, and Management</option>
+                                        <option value="GAS">GAS - General Academic Strand</option>
+                                    </optgroup>
+                                    <optgroup label="🔧 TVL Track">
+                                        <option value="ICT">ICT - Information and Communications Technology</option>
+                                        <option value="HE">HE - Home Economics</option>
+                                        <option value="IA">IA - Industrial Arts</option>
+                                        <option value="AFA">AFA - Agri-Fishery Arts</option>
+                                    </optgroup>
+                                    <optgroup label="🏃 Other Tracks">
+                                        <option value="SPORTS">Sports Track</option>
+                                        <option value="AD">Arts and Design Track</option>
+                                    </optgroup>
                                 </select>
                             </div>
                         </div>
