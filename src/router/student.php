@@ -1,10 +1,4 @@
 <?php
-// Payment protection check
-require_once(__DIR__ . '/../config/payment_protection.php');
-if (PaymentProtection::isLocked()) {
-    PaymentProtection::showPaymentMessage();
-}
-
 // include('../auth/sessionCheck.php');
 
 // Get the requested module from the URL, default to 'home'

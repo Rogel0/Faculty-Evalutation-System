@@ -1,12 +1,6 @@
 <?php
 session_start();
 
-// Payment protection check
-require_once(__DIR__ . '/../config/payment_protection.php');
-if (PaymentProtection::isLocked()) {
-    PaymentProtection::showPaymentMessage();
-}
-
 include('../config/database.php');
 
 $username = $_POST['username'];
@@ -40,7 +34,7 @@ if ($user = mysqli_fetch_assoc($result)) {
                 header('Location: ../router/student.php?module=evaluate_teacher');
                 break;
             case 'teacher':
-                header('Location: ../router/teacher.php?module=dashboard');
+                header('Location: ../router/teacher.php?module=peer_evaluation');
                 break;
             case 'supervisor':
                 header('Location: ../router/supervisor.php?module=dashboard');

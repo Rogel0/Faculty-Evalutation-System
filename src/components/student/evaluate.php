@@ -47,7 +47,7 @@ if ($tableCheck->num_rows > 0) {
         }
     }
     $stmt->close();
-    
+
     // Check if student has already evaluated this teacher for this subject
     $alreadyEvaluated = false;
     $evaluationInfo = null;
@@ -62,7 +62,7 @@ if ($tableCheck->num_rows > 0) {
         $checkStmt->bind_param('iii', $student_id, $selected_enrollment['teacher_id'], $selected_enrollment['subject_id']);
         $checkStmt->execute();
         $checkResult = $checkStmt->get_result();
-        
+
         if ($checkResult->num_rows > 0) {
             $alreadyEvaluated = true;
             $evaluationInfo = $checkResult->fetch_assoc();
@@ -104,32 +104,36 @@ if ($selected_enrollment) {
 <script src="../../scripts/toast.js"></script>
 
 <style>
-@media (max-width: 768px) {
-    .mobile-form-wide {
-        width: 100% !important;
-        max-width: none !important;
-        margin: 0 !important;
+    @media (max-width: 768px) {
+        .mobile-form-wide {
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+        }
+
+        .mobile-rating-grid {
+            width: 100% !important;
+            gap: 2px !important;
+        }
+
+        .mobile-question-container {
+            width: 100% !important;
+            padding-left: 0px !important;
+            padding-right: 0px !important;
+            margin: 0 !important;
+        }
+
+        .mobile-radio-label {
+            width: 100% !important;
+            min-width: 0 !important;
+            padding: 8px 2px !important;
+        }
+
+        .evaluation-form-container {
+            padding: 4px !important;
+            margin: 0 !important;
+        }
     }
-    .mobile-rating-grid {
-        width: 100% !important;
-        gap: 2px !important;
-    }
-    .mobile-question-container {
-        width: 100% !important;
-        padding-left: 0px !important;
-        padding-right: 0px !important;
-        margin: 0 !important;
-    }
-    .mobile-radio-label {
-        width: 100% !important;
-        min-width: 0 !important;
-        padding: 8px 2px !important;
-    }
-    .evaluation-form-container {
-        padding: 4px !important;
-        margin: 0 !important;
-    }
-}
 </style>
 
 <div class="w-full h-auto p-0 md:p-4 overflow-y-hidden">
@@ -164,37 +168,39 @@ if ($selected_enrollment) {
             </div>
 
             <!-- Teacher Selection -->
-            <div class="bg-white rounded-lg shadow-md p-4 md:p-6">
-                <h2 class="text-lg font-semibold text-gray-900 mb-5">Select Teacher to Evaluate</h2>
-                
-                <?php if (empty($enrollments)): ?>
-                    <div class="text-center py-8 md:py-8 text-gray-500">
-                        <svg class="w-12 md:w-12 h-12 md:h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                        </svg>
-                        <p class="text-sm md:text-base">No subjects assigned yet.</p>
-                        <p class="text-xs md:text-sm text-gray-400 mt-1">Contact your administrator to enroll in subjects.</p>
-                    </div>
-                <?php else: ?>
-                    <div class="space-y-4">
-                        <?php foreach ($enrollments as $enroll): ?>
-                            <div class="border border-gray-200 rounded-lg p-4 md:p-4 hover:bg-gray-50 transition-colors">
-                                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-                                    <div class="flex-1">
-                                        <h3 class="font-medium text-gray-900 text-sm md:text-base"><?php echo htmlspecialchars($enroll['subject_name']); ?></h3>
-                                        <p class="text-sm md:text-sm text-gray-600 mt-1">
-                                            Teacher: <?php echo htmlspecialchars($enroll['firstname'] . ' ' . $enroll['lastname']); ?>
-                                        </p>
+            <div class="bg-white rounded-lg shadow-md p-4 md:p-6 max-h-80 md:max-h-96 lg:max-h-[32rem] flex flex-col">
+                <h2 class="text-lg font-semibold text-gray-900 mb-5 flex-shrink-0">Select Teacher to Evaluate</h2>
+
+                <div class="flex-1 overflow-y-auto">
+                    <?php if (empty($enrollments)): ?>
+                        <div class="text-center py-8 md:py-8 text-gray-500">
+                            <svg class="w-12 md:w-12 h-12 md:h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                            </svg>
+                            <p class="text-sm md:text-base">No subjects assigned yet.</p>
+                            <p class="text-xs md:text-sm text-gray-400 mt-1">Contact your administrator to enroll in subjects.</p>
+                        </div>
+                    <?php else: ?>
+                        <div class="space-y-4">
+                            <?php foreach ($enrollments as $enroll): ?>
+                                <div class="border border-gray-200 rounded-lg p-4 md:p-4 hover:bg-gray-50 transition-colors">
+                                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                                        <div class="flex-1">
+                                            <h3 class="font-medium text-gray-900 text-sm md:text-base"><?php echo htmlspecialchars($enroll['subject_name']); ?></h3>
+                                            <p class="text-sm md:text-sm text-gray-600 mt-1">
+                                                Teacher: <?php echo htmlspecialchars($enroll['firstname'] . ' ' . $enroll['lastname']); ?>
+                                            </p>
+                                        </div>
+                                        <a href="?module=evaluate_teacher&enrollment_id=<?php echo $enroll['id']; ?>"
+                                            class="w-full sm:w-auto text-center px-4 md:px-4 py-3 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold rounded-md transition-colors duration-200 shadow-sm text-sm">
+                                            Evaluate
+                                        </a>
                                     </div>
-                                    <a href="?module=evaluate_teacher&enrollment_id=<?php echo $enroll['id']; ?>" 
-                                       class="w-full sm:w-auto text-center px-4 md:px-4 py-3 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold rounded-md transition-colors duration-200 shadow-sm text-sm">
-                                        Evaluate
-                                    </a>
                                 </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     <?php else: ?>
@@ -247,7 +253,7 @@ if ($selected_enrollment) {
                                     <?php echo date('F j, Y \a\t g:i A', strtotime($evaluationInfo['created_at'])); ?>
                                 </p>
                                 <p class="text-sm text-gray-600 mt-1">
-                                    <?php 
+                                    <?php
                                     $days_ago = floor((time() - strtotime($evaluationInfo['created_at'])) / (60 * 60 * 24));
                                     if ($days_ago == 0) {
                                         echo "Completed today";
@@ -280,15 +286,15 @@ if ($selected_enrollment) {
 
                     <!-- Action Buttons -->
                     <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                        <a href="?module=evaluate_teacher" 
-                           class="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-lg transition-colors duration-200 text-center">
+                        <a href="?module=evaluate_teacher"
+                            class="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-lg transition-colors duration-200 text-center">
                             <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                             </svg>
                             Back to Teachers List
                         </a>
-                        <a href="?module=my-evaluations" 
-                           class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200 text-center">
+                        <a href="?module=my-evaluations"
+                            class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200 text-center">
                             <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                             </svg>
@@ -300,258 +306,255 @@ if ($selected_enrollment) {
         <?php else: ?>
             <!-- Evaluation Form View -->
             <div class="grid grid-cols-1 xl:grid-cols-4 gap-1 md:gap-6 px-1 md:px-0">
-            <!-- Teacher Info Sidebar -->
-            <div class="xl:col-span-1 bg-gray-100 rounded-lg p-3 md:p-6 shadow-sm mb-2 xl:mb-0">
-                <h2 class="text-lg font-semibold text-gray-800 mb-5">Evaluation Details</h2>
-                
-                <!-- Teacher Info -->
-                <div class="space-y-4">
-                    <div class="bg-white rounded-lg p-4 md:p-4">
-                        <h3 class="font-medium text-gray-900 mb-3">Teacher</h3>
-                        <div class="flex items-center space-x-3">
-                            <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                                <span class="text-white font-bold text-sm"><?php echo strtoupper(substr($selected_enrollment['firstname'], 0, 1)); ?></span>
+                <!-- Teacher Info Sidebar -->
+                <div class="xl:col-span-1 bg-gray-100 rounded-lg p-3 md:p-6 shadow-sm mb-2 xl:mb-0">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-5">Evaluation Details</h2>
+
+                    <!-- Teacher Info -->
+                    <div class="space-y-4">
+                        <div class="bg-white rounded-lg p-4 md:p-4">
+                            <h3 class="font-medium text-gray-900 mb-3">Teacher</h3>
+                            <div class="flex items-center space-x-3">
+                                <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                                    <span class="text-white font-bold text-sm"><?php echo strtoupper(substr($selected_enrollment['firstname'], 0, 1)); ?></span>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-gray-900 text-sm md:text-base"><?php echo htmlspecialchars($selected_enrollment['firstname'] . ' ' . $selected_enrollment['lastname']); ?></p>
+                                    <p class="text-xs md:text-sm text-gray-600"><?php echo htmlspecialchars($selected_enrollment['subject_name']); ?></p>
+                                </div>
                             </div>
-                            <div>
-                                <p class="font-semibold text-gray-900 text-sm md:text-base"><?php echo htmlspecialchars($selected_enrollment['firstname'] . ' ' . $selected_enrollment['lastname']); ?></p>
-                                <p class="text-xs md:text-sm text-gray-600"><?php echo htmlspecialchars($selected_enrollment['subject_name']); ?></p>
+                        </div>
+
+                        <!-- Student Info -->
+                        <div class="bg-white rounded-lg p-4 md:p-4">
+                            <h3 class="font-medium text-gray-900 mb-3">Evaluator</h3>
+                            <div class="flex items-center space-x-3">
+                                <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                                    <span class="text-white font-bold text-sm"><?php echo strtoupper(substr($firstname, 0, 1)); ?></span>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-gray-900 text-sm md:text-base"><?php echo htmlspecialchars($firstname . ' ' . $lastname); ?></p>
+                                    <p class="text-xs md:text-sm text-gray-600"><?php echo htmlspecialchars($course); ?></p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Student Info -->
-                    <div class="bg-white rounded-lg p-4 md:p-4">
-                        <h3 class="font-medium text-gray-900 mb-3">Evaluator</h3>
-                        <div class="flex items-center space-x-3">
-                            <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                                <span class="text-white font-bold text-sm"><?php echo strtoupper(substr($firstname, 0, 1)); ?></span>
-                            </div>
-                            <div>
-                                <p class="font-semibold text-gray-900 text-sm md:text-base"><?php echo htmlspecialchars($firstname . ' ' . $lastname); ?></p>
-                                <p class="text-xs md:text-sm text-gray-600"><?php echo htmlspecialchars($course); ?></p>
-                            </div>
+
+                    <!-- Back Button -->
+                    <div class="mt-5 md:mt-6">
+                        <a href="?module=evaluate_teacher"
+                            class="w-full flex items-center justify-center space-x-2 px-4 py-3 md:px-4 md:py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors duration-200 text-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                            </svg>
+                            <span>Back to Teachers</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Evaluation Form -->
+                <div class="xl:col-span-3 bg-white rounded-lg shadow-md p-1 md:p-5 w-full min-w-0 evaluation-form-container">
+                    <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-3 md:mb-6 space-y-3 md:space-y-0 w-full px-1 md:px-0">
+                        <h2 class="text-lg md:text-xl font-semibold text-gray-900">Teacher Evaluation Form</h2>
+                        <div class="text-xs md:text-sm text-gray-500 bg-gray-100 p-3 rounded text-center">
+                            <span class="block md:inline">Rating Scale:</span>
+                            <span class="block md:inline md:ml-2">5=Excellent | 4=Good | 3=Fair | 2=Poor | 1=Very Poor</span>
                         </div>
                     </div>
-                </div>
 
-                <!-- Back Button -->
-                <div class="mt-5 md:mt-6">
-                    <a href="?module=evaluate_teacher" 
-                       class="w-full flex items-center justify-center space-x-2 px-4 py-3 md:px-4 md:py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors duration-200 text-sm">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                        </svg>
-                        <span>Back to Teachers</span>
-                    </a>
-                </div>
-            </div>
+                    <form action="../actions/SubmitEvaluation.php" method="POST" class="space-y-5 md:space-y-6 w-full mobile-form-wide">
+                        <input type="hidden" name="enrollment_id" value="<?php echo $selected_enrollment['id']; ?>">
+                        <input type="hidden" name="teacher_id" value="<?php echo $selected_enrollment['teacher_id']; ?>">
+                        <input type="hidden" name="subject_id" value="<?php echo $selected_enrollment['subject_id']; ?>">
 
-            <!-- Evaluation Form -->
-            <div class="xl:col-span-3 bg-white rounded-lg shadow-md p-1 md:p-5 w-full min-w-0 evaluation-form-container">
-                <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-3 md:mb-6 space-y-3 md:space-y-0 w-full px-1 md:px-0">
-                    <h2 class="text-lg md:text-xl font-semibold text-gray-900">Teacher Evaluation Form</h2>
-                    <div class="text-xs md:text-sm text-gray-500 bg-gray-100 p-3 rounded text-center">
-                        <span class="block md:inline">Rating Scale:</span>
-                        <span class="block md:inline md:ml-2">5=Excellent | 4=Good | 3=Fair | 2=Poor | 1=Very Poor</span>
-                    </div>
-                </div>
-
-                <form action="../actions/SubmitEvaluation.php" method="POST" class="space-y-5 md:space-y-6 w-full mobile-form-wide">
-                    <input type="hidden" name="enrollment_id" value="<?php echo $selected_enrollment['id']; ?>">
-                    <input type="hidden" name="teacher_id" value="<?php echo $selected_enrollment['teacher_id']; ?>">
-                    <input type="hidden" name="subject_id" value="<?php echo $selected_enrollment['subject_id']; ?>">
-                    
-                    <div class="max-h-[60vh] md:max-h-[70vh] overflow-y-auto no-scroll w-full mobile-form-wide">
-                        <?php if (!empty($questionsData)): ?>
-                            <?php $criteriaIndex = 1; ?>
-                            <?php foreach ($questionsData as $criteriaName => $questions): ?>
-                                <div class="border border-gray-300 rounded-lg mb-5 md:mb-6 overflow-hidden w-full">
-                                    <!-- Criteria Header -->
-                                    <div class="bg-gray-800 text-white p-4 md:p-4">
-                                        <div class="flex flex-col md:flex-row md:justify-between md:items-center space-y-2 md:space-y-0">
-                                            <h3 class="font-medium text-sm md:text-base">
-                                                Criteria 0<?php echo $criteriaIndex; ?>: <?php echo htmlspecialchars($criteriaName); ?>
-                                            </h3>
-                                            <span class="text-xs bg-gray-600 px-2 py-1 rounded self-start md:self-auto">
-                                                <?php echo count($questions); ?> questions
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <!-- Questions - Mobile Optimized -->
-                                    <div class="bg-white">
-                                        <!-- Desktop Table View -->
-                                        <div class="hidden md:block">
-                                            <!-- Rating Headers -->
-                                            <div class="bg-gray-100 grid grid-cols-12 text-xs font-medium text-gray-700 border-b border-gray-300">
-                                                <div class="col-span-7 p-3 text-left border-r border-gray-300">Question</div>
-                                                <div class="col-span-1 p-2 text-center border-r border-gray-300">
-                                                    <span class="block">5</span>
-                                                    <span class="text-[10px] text-gray-500">Excellent</span>
-                                                </div>
-                                                <div class="col-span-1 p-2 text-center border-r border-gray-300">
-                                                    <span class="block">4</span>
-                                                    <span class="text-[10px] text-gray-500">Good</span>
-                                                </div>
-                                                <div class="col-span-1 p-2 text-center border-r border-gray-300">
-                                                    <span class="block">3</span>
-                                                    <span class="text-[10px] text-gray-500">Fair</span>
-                                                </div>
-                                                <div class="col-span-1 p-2 text-center border-r border-gray-300">
-                                                    <span class="block">2</span>
-                                                    <span class="text-[10px] text-gray-500">Poor</span>
-                                                </div>
-                                                <div class="col-span-1 p-2 text-center">
-                                                    <span class="block">1</span>
-                                                    <span class="text-[10px] text-gray-500">Very Poor</span>
-                                                </div>
+                        <div class="max-h-[60vh] md:max-h-[70vh] overflow-y-auto no-scroll w-full mobile-form-wide">
+                            <?php if (!empty($questionsData)): ?>
+                                <?php $criteriaIndex = 1; ?>
+                                <?php foreach ($questionsData as $criteriaName => $questions): ?>
+                                    <div class="border border-gray-300 rounded-lg mb-5 md:mb-6 overflow-hidden w-full">
+                                        <!-- Criteria Header -->
+                                        <div class="bg-gray-800 text-white p-4 md:p-4">
+                                            <div class="flex flex-col md:flex-row md:justify-between md:items-center space-y-2 md:space-y-0">
+                                                <h3 class="font-medium text-sm md:text-base">
+                                                    Criteria 0<?php echo $criteriaIndex; ?>: <?php echo htmlspecialchars($criteriaName); ?>
+                                                </h3>
+                                                <span class="text-xs bg-gray-600 px-2 py-1 rounded self-start md:self-auto">
+                                                    <?php echo count($questions); ?> questions
+                                                </span>
                                             </div>
-
-                                            <!-- Desktop Questions -->
-                                            <?php foreach ($questions as $index => $question): ?>
-                                                <div class="grid grid-cols-12 items-center hover:bg-gray-50 border-b border-gray-200 last:border-b-0">
-                                                    <div class="col-span-7 p-4 text-sm text-gray-700 border-r border-gray-300">
-                                                        <div class="flex items-start">
-                                                            <span class="font-medium text-gray-900 mr-3 flex-shrink-0"><?php echo ($index + 1); ?>.</span>
-                                                            <span class="leading-relaxed"><?php echo htmlspecialchars($question['question_text']); ?></span>
-                                                        </div>
-                                                    </div>
-                                                    <?php for ($rating = 5; $rating >= 1; $rating--): ?>
-                                                        <div class="col-span-1 p-2 text-center border-r border-gray-300 last:border-r-0">
-                                                            <input type="radio" name="q_<?php echo $question['id']; ?>" value="<?php echo $rating; ?>" required
-                                                                class="w-4 h-4 text-yellow-500 focus:ring-yellow-500 focus:ring-2 cursor-pointer">
-                                                        </div>
-                                                    <?php endfor; ?>
-                                                </div>
-                                            <?php endforeach; ?>
                                         </div>
 
-                                        <!-- Mobile Card View -->
-                                        <div class="block md:hidden w-full mobile-form-wide">
-                                            <?php foreach ($questions as $index => $question): ?>
-                                                <div class="mobile-question-spacing border-b border-gray-200 last:border-b-0 w-full mobile-question-container py-3">
-                                                    <!-- Question -->
-                                                    <div class="mb-3 w-full px-1">
-                                                        <span class="font-medium text-gray-900 mr-2 text-sm"><?php echo ($index + 1); ?>.</span>
-                                                        <span class="text-sm text-gray-700 leading-relaxed"><?php echo htmlspecialchars($question['question_text']); ?></span>
+                                        <!-- Questions - Mobile Optimized -->
+                                        <div class="bg-white">
+                                            <!-- Desktop Table View -->
+                                            <div class="hidden md:block">
+                                                <!-- Rating Headers -->
+                                                <div class="bg-gray-100 grid grid-cols-12 text-xs font-medium text-gray-700 border-b border-gray-300">
+                                                    <div class="col-span-7 p-3 text-left border-r border-gray-300">Question</div>
+                                                    <div class="col-span-1 p-2 text-center border-r border-gray-300">
+                                                        <span class="block">5</span>
+                                                        <span class="text-[10px] text-gray-500">Excellent</span>
                                                     </div>
-                                                    
-                                                    <!-- Rating Options - Mobile Friendly -->
-                                                    <div class="grid grid-cols-5 gap-0.5 mobile-rating-grid mt-2 w-full px-1">
+                                                    <div class="col-span-1 p-2 text-center border-r border-gray-300">
+                                                        <span class="block">4</span>
+                                                        <span class="text-[10px] text-gray-500">Good</span>
+                                                    </div>
+                                                    <div class="col-span-1 p-2 text-center border-r border-gray-300">
+                                                        <span class="block">3</span>
+                                                        <span class="text-[10px] text-gray-500">Fair</span>
+                                                    </div>
+                                                    <div class="col-span-1 p-2 text-center border-r border-gray-300">
+                                                        <span class="block">2</span>
+                                                        <span class="text-[10px] text-gray-500">Poor</span>
+                                                    </div>
+                                                    <div class="col-span-1 p-2 text-center">
+                                                        <span class="block">1</span>
+                                                        <span class="text-[10px] text-gray-500">Very Poor</span>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Desktop Questions -->
+                                                <?php foreach ($questions as $index => $question): ?>
+                                                    <div class="grid grid-cols-12 items-center hover:bg-gray-50 border-b border-gray-200 last:border-b-0">
+                                                        <div class="col-span-7 p-4 text-sm text-gray-700 border-r border-gray-300">
+                                                            <div class="flex items-start">
+                                                                <span class="font-medium text-gray-900 mr-3 flex-shrink-0"><?php echo ($index + 1); ?>.</span>
+                                                                <span class="leading-relaxed"><?php echo htmlspecialchars($question['question_text']); ?></span>
+                                                            </div>
+                                                        </div>
                                                         <?php for ($rating = 5; $rating >= 1; $rating--): ?>
-                                                            <label class="mobile-radio-label flex flex-col items-center p-1 bg-gray-50 rounded-lg border cursor-pointer hover:bg-gray-100 min-h-[80px] justify-center w-full">
+                                                            <div class="col-span-1 p-2 text-center border-r border-gray-300 last:border-r-0">
                                                                 <input type="radio" name="q_<?php echo $question['id']; ?>" value="<?php echo $rating; ?>" required
-                                                                    class="mb-1 w-5 h-5 text-yellow-500 focus:ring-yellow-500 cursor-pointer">
-                                                                <span class="text-base font-medium text-gray-900 mb-1"><?php echo $rating; ?></span>
-                                                                <span class="text-xs text-gray-500 text-center leading-tight px-0.5">
-                                                                    <?php 
-                                                                    echo $rating == 5 ? 'Excellent' : 
-                                                                        ($rating == 4 ? 'Good' : 
-                                                                        ($rating == 3 ? 'Fair' : 
-                                                                        ($rating == 2 ? 'Poor' : 'Very Poor')));
-                                                                    ?>
-                                                                </span>
-                                                            </label>
+                                                                    class="w-4 h-4 text-yellow-500 focus:ring-yellow-500 focus:ring-2 cursor-pointer">
+                                                            </div>
                                                         <?php endfor; ?>
                                                     </div>
-                                                </div>
-                                            <?php endforeach; ?>
+                                                <?php endforeach; ?>
+                                            </div>
+
+                                            <!-- Mobile Card View -->
+                                            <div class="block md:hidden w-full mobile-form-wide">
+                                                <?php foreach ($questions as $index => $question): ?>
+                                                    <div class="mobile-question-spacing border-b border-gray-200 last:border-b-0 w-full mobile-question-container py-3">
+                                                        <!-- Question -->
+                                                        <div class="mb-3 w-full px-1">
+                                                            <span class="font-medium text-gray-900 mr-2 text-sm"><?php echo ($index + 1); ?>.</span>
+                                                            <span class="text-sm text-gray-700 leading-relaxed"><?php echo htmlspecialchars($question['question_text']); ?></span>
+                                                        </div>
+
+                                                        <!-- Rating Options - Mobile Friendly -->
+                                                        <div class="grid grid-cols-5 gap-0.5 mobile-rating-grid mt-2 w-full px-1">
+                                                            <?php for ($rating = 5; $rating >= 1; $rating--): ?>
+                                                                <label class="mobile-radio-label flex flex-col items-center p-1 bg-gray-50 rounded-lg border cursor-pointer hover:bg-gray-100 min-h-[80px] justify-center w-full">
+                                                                    <input type="radio" name="q_<?php echo $question['id']; ?>" value="<?php echo $rating; ?>" required
+                                                                        class="mb-1 w-5 h-5 text-yellow-500 focus:ring-yellow-500 cursor-pointer">
+                                                                    <span class="text-base font-medium text-gray-900 mb-1"><?php echo $rating; ?></span>
+                                                                    <span class="text-xs text-gray-500 text-center leading-tight px-0.5">
+                                                                        <?php
+                                                                        echo $rating == 5 ? 'Excellent' : ($rating == 4 ? 'Good' : ($rating == 3 ? 'Fair' : ($rating == 2 ? 'Poor' : 'Very Poor')));
+                                                                        ?>
+                                                                    </span>
+                                                                </label>
+                                                            <?php endfor; ?>
+                                                        </div>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </div>
                                         </div>
                                     </div>
+                                    <?php $criteriaIndex++; ?>
+                                <?php endforeach; ?>
+
+                                <!-- Submit Button -->
+                                <div class="sticky bottom-0 bg-white border-t border-gray-200 pt-5">
+                                    <div class="flex flex-col md:flex-row md:justify-between md:items-center space-y-4 md:space-y-0">
+                                        <p class="text-sm md:text-sm text-gray-600 text-center md:text-left">
+                                            Please ensure all questions are answered before submitting.
+                                        </p>
+                                        <button type="submit"
+                                            class="w-full md:w-auto px-6 md:px-8 py-4 md:py-3 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold rounded-md transition-colors duration-200 shadow-sm text-base">
+                                            Submit Evaluation
+                                        </button>
+                                    </div>
                                 </div>
-                                <?php $criteriaIndex++; ?>
-                            <?php endforeach; ?>
-                            
-                            <!-- Submit Button -->
-                            <div class="sticky bottom-0 bg-white border-t border-gray-200 pt-5">
-                                <div class="flex flex-col md:flex-row md:justify-between md:items-center space-y-4 md:space-y-0">
-                                    <p class="text-sm md:text-sm text-gray-600 text-center md:text-left">
-                                        Please ensure all questions are answered before submitting.
-                                    </p>
-                                    <button type="submit" 
-                                        class="w-full md:w-auto px-6 md:px-8 py-4 md:py-3 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold rounded-md transition-colors duration-200 shadow-sm text-base">
-                                        Submit Evaluation
-                                    </button>
+                            <?php else: ?>
+                                <div class="text-center py-8 md:py-12 text-gray-500">
+                                    <svg class="w-12 md:w-16 h-12 md:h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                    <h3 class="text-lg font-medium text-gray-900 mb-2">No Questions Available</h3>
+                                    <p class="text-sm md:text-base">The evaluation questionnaire is not yet available.</p>
+                                    <p class="text-xs md:text-sm text-gray-400 mt-1">Please contact your administrator.</p>
                                 </div>
-                            </div>
-                        <?php else: ?>
-                            <div class="text-center py-8 md:py-12 text-gray-500">
-                                <svg class="w-12 md:w-16 h-12 md:h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                </svg>
-                                <h3 class="text-lg font-medium text-gray-900 mb-2">No Questions Available</h3>
-                                <p class="text-sm md:text-base">The evaluation questionnaire is not yet available.</p>
-                                <p class="text-xs md:text-sm text-gray-400 mt-1">Please contact your administrator.</p>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </form>
+                            <?php endif; ?>
+                        </div>
+                    </form>
+                </div>
             </div>
-        </div>
         <?php endif; ?>
     <?php endif; ?>
 </div>
 
 <style>
-.no-scroll::-webkit-scrollbar {
-    width: 6px;
-}
-
-.no-scroll::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-}
-
-.no-scroll::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 3px;
-}
-
-.no-scroll::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
-}
-
-/* Mobile-specific enhancements */
-@media (max-width: 768px) {
-    .mobile-radio-label:has(input:checked) {
-        background-color: #fef3c7;
-        border-color: #f59e0b;
-        border-width: 2px;
+    .no-scroll::-webkit-scrollbar {
+        width: 6px;
     }
-    
-    .mobile-radio-label {
-        transition: all 0.2s ease;
-        min-height: 90px;
-    }
-    
-    .mobile-radio-label:active {
-        transform: scale(0.98);
-    }
-    
-    .mobile-radio-label:hover {
-        background-color: #f3f4f6;
-    }
-}
 
-/* Touch-friendly radio buttons */
-input[type="radio"] {
-    transform: scale(1.3);
-}
+    .no-scroll::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
 
-@media (max-width: 640px) {
+    .no-scroll::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+    }
+
+    .no-scroll::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+
+    /* Mobile-specific enhancements */
+    @media (max-width: 768px) {
+        .mobile-radio-label:has(input:checked) {
+            background-color: #fef3c7;
+            border-color: #f59e0b;
+            border-width: 2px;
+        }
+
+        .mobile-radio-label {
+            transition: all 0.2s ease;
+            min-height: 90px;
+        }
+
+        .mobile-radio-label:active {
+            transform: scale(0.98);
+        }
+
+        .mobile-radio-label:hover {
+            background-color: #f3f4f6;
+        }
+    }
+
+    /* Touch-friendly radio buttons */
     input[type="radio"] {
-        transform: scale(1.5);
+        transform: scale(1.3);
     }
-}
 
-/* Better spacing for mobile */
-@media (max-width: 768px) {
-    .mobile-question-spacing {
-        padding: 1.25rem;
+    @media (max-width: 640px) {
+        input[type="radio"] {
+            transform: scale(1.5);
+        }
     }
-    
-    .mobile-rating-grid {
-        gap: 0.5rem;
+
+    /* Better spacing for mobile */
+    @media (max-width: 768px) {
+        .mobile-question-spacing {
+            padding: 1.25rem;
+        }
+
+        .mobile-rating-grid {
+            gap: 0.5rem;
+        }
     }
-}
 </style>

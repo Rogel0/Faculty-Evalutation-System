@@ -2,11 +2,6 @@
 // Get database connection
 include('../config/database.php');
 
-// Payment protection notification
-require_once('../config/payment_protection.php');
-$daysUntilLock = PaymentProtection::getDaysUntilLock();
-$isLocked = PaymentProtection::isLocked();
-
 // Get filter parameters
 $selected_school_year = isset($_GET['school_year']) ? $_GET['school_year'] : 'all';
 
@@ -38,19 +33,19 @@ try {
     if ($selected_school_year !== 'all' && is_numeric($selected_school_year)) {
         // Filtered counts for specific school year
         $school_year_id = intval($selected_school_year);
-        
+
         $result = $conn->query("SELECT COUNT(DISTINCT e.evaluator_id) as total_students FROM evaluations e WHERE e.evaluator_type = 'student' AND e.school_year_id = $school_year_id");
         $total_students = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_students'] : 0;
-        
+
         $result = $conn->query("SELECT COUNT(DISTINCT e.teacher_id) as total_teachers FROM evaluations e WHERE e.school_year_id = $school_year_id");
         $total_teachers = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_teachers'] : 0;
-        
+
         $result = $conn->query("SELECT COUNT(*) as total_evaluations FROM evaluations e WHERE e.school_year_id = $school_year_id");
         $total_evaluations = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_evaluations'] : 0;
-        
+
         $result = $conn->query("SELECT COUNT(DISTINCT e.subject_id) as total_subjects FROM evaluations e WHERE e.school_year_id = $school_year_id");
         $total_subjects = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_subjects'] : 0;
-        
+
         // If no data for this school year, show message
         if ($total_evaluations == 0) {
             $no_data_message = "No evaluation data found for the selected school year.";
@@ -59,17 +54,17 @@ try {
         // All school years - show overall statistics
         $result = $conn->query("SELECT COUNT(*) as total_students FROM users WHERE user_type = 'student'");
         $total_students = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_students'] : 0;
-        
+
         $result = $conn->query("SELECT COUNT(*) as total_teachers FROM users WHERE user_type = 'teacher'");
         $total_teachers = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_teachers'] : 0;
-        
+
         $result = $conn->query("SELECT COUNT(*) as total_evaluations FROM evaluations");
         $total_evaluations = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_evaluations'] : 0;
-        
+
         $result = $conn->query("SELECT COUNT(*) as total_subjects FROM subjects");
         $total_subjects = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_subjects'] : 0;
     }
-    
+
     // Evaluations by course/strand (with filter)
     if ($selected_school_year !== 'all' && is_numeric($selected_school_year)) {
         $school_year_id = intval($selected_school_year);
@@ -89,7 +84,7 @@ try {
             GROUP BY u.course
         ";
     }
-    
+
     $result = $conn->query($strand_query);
     $strand_data = [];
     if ($result && $result->num_rows > 0) {
@@ -97,7 +92,7 @@ try {
             $strand_data[] = ['strand' => $row['course'], 'evaluation_count' => $row['evaluation_count']];
         }
     }
-    
+
     // Average ratings by school year (filtered or all)
     if ($selected_school_year !== 'all' && is_numeric($selected_school_year)) {
         $school_year_id = intval($selected_school_year);
@@ -121,7 +116,7 @@ try {
             ORDER BY sy.year, sy.semester
         ";
     }
-    
+
     $result = $conn->query($yearly_query);
     $yearly_ratings = [];
     if ($result && $result->num_rows > 0) {
@@ -129,7 +124,7 @@ try {
             $yearly_ratings[] = $row;
         }
     }
-    
+
     // Top performing teachers (with filter)
     if ($selected_school_year !== 'all' && is_numeric($selected_school_year)) {
         $school_year_id = intval($selected_school_year);
@@ -159,7 +154,7 @@ try {
             LIMIT 10
         ";
     }
-    
+
     $result = $conn->query($teacher_query);
     $top_teachers = [];
     if ($result && $result->num_rows > 0) {
@@ -167,7 +162,7 @@ try {
             $top_teachers[] = $row;
         }
     }
-    
+
     // Evaluation distribution by rating (with filter)
     if ($selected_school_year !== 'all' && is_numeric($selected_school_year)) {
         $school_year_id = intval($selected_school_year);
@@ -187,7 +182,7 @@ try {
             ORDER BY e.answer
         ";
     }
-    
+
     $result = $conn->query($rating_query);
     $rating_distribution = [];
     if ($result && $result->num_rows > 0) {
@@ -195,7 +190,7 @@ try {
             $rating_distribution[] = $row;
         }
     }
-    
+
     // Monthly evaluation trends (check if created_at exists and apply filter)
     $result = $conn->query("SHOW COLUMNS FROM evaluations LIKE 'created_at'");
     if ($result && $result->num_rows > 0) {
@@ -221,7 +216,7 @@ try {
                 ORDER BY month
             ";
         }
-        
+
         $result = $conn->query($monthly_query);
         $monthly_trends = [];
         if ($result && $result->num_rows > 0) {
@@ -237,7 +232,6 @@ try {
             ['month' => '2024-03', 'evaluation_count' => 18, 'avg_rating' => 4.3]
         ];
     }
-    
 } catch (Exception $e) {
     // Handle errors gracefully and log the error
     echo "<script>console.log('Database Error: " . addslashes($e->getMessage()) . "');</script>";
@@ -265,7 +259,7 @@ if ($selected_school_year !== 'all') {
         $debug_count = $debug_result->fetch_assoc()['count'];
         echo "<script>console.log('Debug: Evaluations for school year $selected_school_year: $debug_count');</script>";
     }
-    
+
     // Check all evaluations by school year
     $debug_result = $conn->query("SELECT school_year_id, COUNT(*) as count FROM evaluations GROUP BY school_year_id");
     $debug_data = [];
@@ -286,28 +280,7 @@ if ($selected_school_year !== 'all') {
                 <h1 class="text-3xl font-bold text-gray-900">Faculty Evaluation Analytics Dashboard</h1>
                 <p class="text-gray-600 mt-2">Comprehensive analysis of SHS faculty evaluation data</p>
             </div>
-            
-            <!-- Developer Contact Notification -->
-            <?php if (!$isLocked && $daysUntilLock <= 7): ?>
-            <div class="mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
-                <div class="flex items-center">
-                    <svg class="w-5 h-5 text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    <div>
-                        <p class="text-sm font-medium text-blue-800">
-                            <?php if ($daysUntilLock === 0): ?>
-                                Please contact the developer today
-                            <?php else: ?>
-                                Reminder: Please contact the developer within <strong><?php echo $daysUntilLock; ?> day(s)</strong>
-                            <?php endif; ?>
-                        </p>
-                        <p class="text-xs text-blue-600 mt-1">Important system update required</p>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
-            
+
             <!-- Filter Controls -->
             <div class="bg-white rounded-lg shadow-md p-4 min-w-[300px]">
                 <form method="GET" action="" class="flex flex-col sm:flex-row gap-3">
@@ -315,7 +288,7 @@ if ($selected_school_year !== 'all') {
                     <?php if (isset($_GET['module'])): ?>
                         <input type="hidden" name="module" value="<?php echo htmlspecialchars($_GET['module']); ?>">
                     <?php endif; ?>
-                    
+
                     <div class="flex-1">
                         <label for="school_year" class="block text-sm font-medium text-gray-700 mb-1">School Year</label>
                         <select name="school_year" id="school_year" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
@@ -327,18 +300,18 @@ if ($selected_school_year !== 'all') {
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    
+
                     <div class="flex items-end">
                         <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 text-sm font-medium">
                             Apply Filter
                         </button>
                     </div>
                 </form>
-                
+
                 <?php if ($selected_school_year !== 'all'): ?>
                     <div class="mt-2">
-                        <a href="?<?php echo isset($_GET['module']) ? 'module=' . htmlspecialchars($_GET['module']) : ''; ?>" 
-                           class="inline-flex items-center text-sm text-gray-500 hover:text-gray-700">
+                        <a href="?<?php echo isset($_GET['module']) ? 'module=' . htmlspecialchars($_GET['module']) : ''; ?>"
+                            class="inline-flex items-center text-sm text-gray-500 hover:text-gray-700">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
@@ -348,7 +321,7 @@ if ($selected_school_year !== 'all') {
                 <?php endif; ?>
             </div>
         </div>
-        
+
         <!-- Current Filter Display -->
         <?php if ($selected_school_year !== 'all'): ?>
             <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -357,9 +330,9 @@ if ($selected_school_year !== 'all') {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
                     </svg>
                     <span class="text-blue-900 font-medium">
-                        Filtered by: 
-                        <?php 
-                        $current_sy = array_filter($available_school_years, function($sy) use ($selected_school_year) {
+                        Filtered by:
+                        <?php
+                        $current_sy = array_filter($available_school_years, function ($sy) use ($selected_school_year) {
                             return $sy['id'] == $selected_school_year;
                         });
                         if (!empty($current_sy)) {
@@ -396,7 +369,7 @@ if ($selected_school_year !== 'all') {
                 </div>
                 <div class="p-3 bg-white bg-opacity-20 rounded-full">
                     <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                 </div>
             </div>
@@ -410,7 +383,7 @@ if ($selected_school_year !== 'all') {
                 </div>
                 <div class="p-3 bg-white bg-opacity-20 rounded-full">
                     <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
+                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
                     </svg>
                 </div>
             </div>
@@ -424,7 +397,7 @@ if ($selected_school_year !== 'all') {
                 </div>
                 <div class="p-3 bg-white bg-opacity-20 rounded-full">
                     <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 4a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1V8zm8 0a1 1 0 011-1h6a1 1 0 011 1v2a1 1 0 01-1 1h-6a1 1 0 01-1-1V8zm0 4a1 1 0 011-1h6a1 1 0 011 1v2a1 1 0 01-1 1h-6a1 1 0 01-1-1v-2z" clip-rule="evenodd"/>
+                        <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 4a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1V8zm8 0a1 1 0 011-1h6a1 1 0 011 1v2a1 1 0 01-1 1h-6a1 1 0 01-1-1V8zm0 4a1 1 0 011-1h6a1 1 0 011 1v2a1 1 0 01-1 1h-6a1 1 0 01-1-1v-2z" clip-rule="evenodd" />
                     </svg>
                 </div>
             </div>
@@ -438,7 +411,7 @@ if ($selected_school_year !== 'all') {
                 </div>
                 <div class="p-3 bg-white bg-opacity-20 rounded-full">
                     <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/>
+                        <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
                     </svg>
                 </div>
             </div>
@@ -498,51 +471,51 @@ if ($selected_school_year !== 'all') {
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     <?php foreach ($top_teachers as $index => $teacher): ?>
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0 h-10 w-10">
-                                    <div class="h-10 w-10 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold">
-                                        <?php echo strtoupper(substr($teacher['teacher_name'], 0, 2)); ?>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10">
+                                        <div class="h-10 w-10 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold">
+                                            <?php echo strtoupper(substr($teacher['teacher_name'], 0, 2)); ?>
+                                        </div>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($teacher['teacher_name']); ?></div>
+                                        <div class="text-sm text-gray-500">Rank #<?php echo $index + 1; ?></div>
                                     </div>
                                 </div>
-                                <div class="ml-4">
-                                    <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($teacher['teacher_name']); ?></div>
-                                    <div class="text-sm text-gray-500">Rank #<?php echo $index + 1; ?></div>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900 font-semibold"><?php echo $teacher['avg_rating']; ?>/5.0</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900"><?php echo number_format($teacher['evaluation_count']); ?></div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <?php 
-                            $rating = (float)$teacher['avg_rating'];
-                            $performance_class = '';
-                            $performance_text = '';
-                            
-                            if ($rating >= 4.5) {
-                                $performance_class = 'bg-green-100 text-green-800';
-                                $performance_text = 'Excellent';
-                            } elseif ($rating >= 4.0) {
-                                $performance_class = 'bg-blue-100 text-blue-800';
-                                $performance_text = 'Very Good';
-                            } elseif ($rating >= 3.5) {
-                                $performance_class = 'bg-yellow-100 text-yellow-800';
-                                $performance_text = 'Good';
-                            } else {
-                                $performance_class = 'bg-red-100 text-red-800';
-                                $performance_text = 'Needs Improvement';
-                            }
-                            ?>
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo $performance_class; ?>">
-                                <?php echo $performance_text; ?>
-                            </span>
-                        </td>
-                    </tr>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900 font-semibold"><?php echo $teacher['avg_rating']; ?>/5.0</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900"><?php echo number_format($teacher['evaluation_count']); ?></div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <?php
+                                $rating = (float)$teacher['avg_rating'];
+                                $performance_class = '';
+                                $performance_text = '';
+
+                                if ($rating >= 4.5) {
+                                    $performance_class = 'bg-green-100 text-green-800';
+                                    $performance_text = 'Excellent';
+                                } elseif ($rating >= 4.0) {
+                                    $performance_class = 'bg-blue-100 text-blue-800';
+                                    $performance_text = 'Very Good';
+                                } elseif ($rating >= 3.5) {
+                                    $performance_class = 'bg-yellow-100 text-yellow-800';
+                                    $performance_text = 'Good';
+                                } else {
+                                    $performance_class = 'bg-red-100 text-red-800';
+                                    $performance_text = 'Needs Improvement';
+                                }
+                                ?>
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo $performance_class; ?>">
+                                    <?php echo $performance_text; ?>
+                                </span>
+                            </td>
+                        </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
@@ -586,229 +559,232 @@ if ($selected_school_year !== 'all') {
 <!-- Chart.js and Custom Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-// Chart.js configurations and data
-const chartColors = {
-    primary: '#3B82F6',
-    success: '#10B981',
-    warning: '#F59E0B',
-    danger: '#EF4444',
-    info: '#06B6D4',
-    purple: '#8B5CF6'
-};
+    // Chart.js configurations and data
+    const chartColors = {
+        primary: '#3B82F6',
+        success: '#10B981',
+        warning: '#F59E0B',
+        danger: '#EF4444',
+        info: '#06B6D4',
+        purple: '#8B5CF6'
+    };
 
-// Strand Chart Data
-const strandData = <?php echo json_encode($strand_data); ?>;
-const strandLabels = strandData.map(item => item.strand || 'Core');
-const strandValues = strandData.map(item => parseInt(item.evaluation_count));
+    // Strand Chart Data
+    const strandData = <?php echo json_encode($strand_data); ?>;
+    const strandLabels = strandData.map(item => item.strand || 'Core');
+    const strandValues = strandData.map(item => parseInt(item.evaluation_count));
 
-// Strand Chart
-const strandCtx = document.getElementById('strandChart').getContext('2d');
-new Chart(strandCtx, {
-    type: 'doughnut',
-    data: {
-        labels: strandLabels,
-        datasets: [{
-            data: strandValues,
-            backgroundColor: [
-                chartColors.primary,
-                chartColors.success,
-                chartColors.warning,
-                chartColors.danger,
-                chartColors.info,
-                chartColors.purple
-            ],
-            borderWidth: 2,
-            borderColor: '#fff'
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                position: 'bottom',
-                labels: {
-                    padding: 20,
-                    usePointStyle: true
+    // Strand Chart
+    const strandCtx = document.getElementById('strandChart').getContext('2d');
+    new Chart(strandCtx, {
+        type: 'doughnut',
+        data: {
+            labels: strandLabels,
+            datasets: [{
+                data: strandValues,
+                backgroundColor: [
+                    chartColors.primary,
+                    chartColors.success,
+                    chartColors.warning,
+                    chartColors.danger,
+                    chartColors.info,
+                    chartColors.purple
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
                 }
             }
         }
-    }
-});
+    });
 
-// Rating Distribution Chart
-const ratingData = <?php echo json_encode($rating_distribution); ?>;
-const ratingLabels = ratingData.map(item => `${item.rating} Stars`);
-const ratingValues = ratingData.map(item => parseInt(item.count));
+    // Rating Distribution Chart
+    const ratingData = <?php echo json_encode($rating_distribution); ?>;
+    const ratingLabels = ratingData.map(item => `${item.rating} Stars`);
+    const ratingValues = ratingData.map(item => parseInt(item.count));
 
-const ratingCtx = document.getElementById('ratingChart').getContext('2d');
-new Chart(ratingCtx, {
-    type: 'bar',
-    data: {
-        labels: ratingLabels,
-        datasets: [{
-            label: 'Number of Ratings',
-            data: ratingValues,
-            backgroundColor: chartColors.primary,
-            borderColor: chartColors.primary,
-            borderWidth: 1,
-            borderRadius: 8
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                display: false
-            }
+    const ratingCtx = document.getElementById('ratingChart').getContext('2d');
+    new Chart(ratingCtx, {
+        type: 'bar',
+        data: {
+            labels: ratingLabels,
+            datasets: [{
+                label: 'Number of Ratings',
+                data: ratingValues,
+                backgroundColor: chartColors.primary,
+                borderColor: chartColors.primary,
+                borderWidth: 1,
+                borderRadius: 8
+            }]
         },
-        scales: {
-            y: {
-                beginAtZero: true,
-                grid: {
-                    color: '#F3F4F6'
-                }
-            },
-            x: {
-                grid: {
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
                     display: false
                 }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: '#F3F4F6'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
             }
         }
-    }
-});
+    });
 
-// Yearly Performance Chart
-const yearlyData = <?php echo json_encode($yearly_ratings); ?>;
-const yearlyLabels = yearlyData.map(item => `${item.year} (${item.semester})`);
-const yearlyValues = yearlyData.map(item => parseFloat(item.avg_rating));
+    // Yearly Performance Chart
+    const yearlyData = <?php echo json_encode($yearly_ratings); ?>;
+    const yearlyLabels = yearlyData.map(item => `${item.year} (${item.semester})`);
+    const yearlyValues = yearlyData.map(item => parseFloat(item.avg_rating));
 
-const yearlyCtx = document.getElementById('yearlyChart').getContext('2d');
-new Chart(yearlyCtx, {
-    type: 'line',
-    data: {
-        labels: yearlyLabels,
-        datasets: [{
-            label: 'Average Rating',
-            data: yearlyValues,
-            borderColor: chartColors.success,
-            backgroundColor: chartColors.success + '20',
-            borderWidth: 3,
-            fill: true,
-            tension: 0.4,
-            pointBackgroundColor: chartColors.success,
-            pointBorderColor: '#fff',
-            pointBorderWidth: 2,
-            pointRadius: 6
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                display: false
-            }
+    const yearlyCtx = document.getElementById('yearlyChart').getContext('2d');
+    new Chart(yearlyCtx, {
+        type: 'line',
+        data: {
+            labels: yearlyLabels,
+            datasets: [{
+                label: 'Average Rating',
+                data: yearlyValues,
+                borderColor: chartColors.success,
+                backgroundColor: chartColors.success + '20',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: chartColors.success,
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 6
+            }]
         },
-        scales: {
-            y: {
-                beginAtZero: true,
-                max: 5,
-                grid: {
-                    color: '#F3F4F6'
-                },
-                ticks: {
-                    stepSize: 0.5
-                }
-            },
-            x: {
-                grid: {
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
                     display: false
                 }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 5,
+                    grid: {
+                        color: '#F3F4F6'
+                    },
+                    ticks: {
+                        stepSize: 0.5
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
             }
         }
-    }
-});
+    });
 
-// Monthly Trends Chart
-const monthlyData = <?php echo json_encode($monthly_trends); ?>;
-const monthlyLabels = monthlyData.map(item => {
-    const date = new Date(item.month + '-01');
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
-});
-const monthlyEvaluations = monthlyData.map(item => parseInt(item.evaluation_count));
-const monthlyRatings = monthlyData.map(item => parseFloat(item.avg_rating));
+    // Monthly Trends Chart
+    const monthlyData = <?php echo json_encode($monthly_trends); ?>;
+    const monthlyLabels = monthlyData.map(item => {
+        const date = new Date(item.month + '-01');
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short'
+        });
+    });
+    const monthlyEvaluations = monthlyData.map(item => parseInt(item.evaluation_count));
+    const monthlyRatings = monthlyData.map(item => parseFloat(item.avg_rating));
 
-const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
-new Chart(monthlyCtx, {
-    type: 'bar',
-    data: {
-        labels: monthlyLabels,
-        datasets: [{
-            label: 'Number of Evaluations',
-            data: monthlyEvaluations,
-            backgroundColor: chartColors.info + '80',
-            borderColor: chartColors.info,
-            borderWidth: 1,
-            yAxisID: 'y',
-            borderRadius: 6
-        }, {
-            label: 'Average Rating',
-            data: monthlyRatings,
-            type: 'line',
-            borderColor: chartColors.warning,
-            backgroundColor: chartColors.warning,
-            borderWidth: 3,
-            pointBackgroundColor: chartColors.warning,
-            pointBorderColor: '#fff',
-            pointBorderWidth: 2,
-            pointRadius: 6,
-            yAxisID: 'y1',
-            tension: 0.4
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: {
-            mode: 'index',
-            intersect: false,
+    const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+    new Chart(monthlyCtx, {
+        type: 'bar',
+        data: {
+            labels: monthlyLabels,
+            datasets: [{
+                label: 'Number of Evaluations',
+                data: monthlyEvaluations,
+                backgroundColor: chartColors.info + '80',
+                borderColor: chartColors.info,
+                borderWidth: 1,
+                yAxisID: 'y',
+                borderRadius: 6
+            }, {
+                label: 'Average Rating',
+                data: monthlyRatings,
+                type: 'line',
+                borderColor: chartColors.warning,
+                backgroundColor: chartColors.warning,
+                borderWidth: 3,
+                pointBackgroundColor: chartColors.warning,
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 6,
+                yAxisID: 'y1',
+                tension: 0.4
+            }]
         },
-        scales: {
-            y: {
-                type: 'linear',
-                display: true,
-                position: 'left',
-                beginAtZero: true,
-                grid: {
-                    color: '#F3F4F6'
-                },
-                title: {
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                y: {
+                    type: 'linear',
                     display: true,
-                    text: 'Number of Evaluations'
-                }
-            },
-            y1: {
-                type: 'linear',
-                display: true,
-                position: 'right',
-                beginAtZero: true,
-                max: 5,
-                grid: {
-                    drawOnChartArea: false,
+                    position: 'left',
+                    beginAtZero: true,
+                    grid: {
+                        color: '#F3F4F6'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Number of Evaluations'
+                    }
                 },
-                title: {
+                y1: {
+                    type: 'linear',
                     display: true,
-                    text: 'Average Rating'
-                }
-            },
-            x: {
-                grid: {
-                    display: false
+                    position: 'right',
+                    beginAtZero: true,
+                    max: 5,
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                    title: {
+                        display: true,
+                        text: 'Average Rating'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
                 }
             }
         }
-    }
-});
+    });
 </script>
