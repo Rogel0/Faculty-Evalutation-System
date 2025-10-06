@@ -97,6 +97,17 @@ $first_initial = strtoupper(substr($_SESSION['firstname'] ?? $_SESSION['username
             <span class="font-medium">Academic Year</span>
         </a>
 
+        <a href="?module=start_evaluation"
+            class="group flex items-center space-x-2 p-4 rounded-lg transition-all duration-200 <?php echo ($currentModule === 'start_evaluation') ? 'bg-yellow-500 text-gray-900 shadow-lg' : 'text-slate-300 hover:bg-slate-600 hover:text-white'; ?>">
+            <div class="w-5 h-5 flex items-center justify-center">
+                <svg fill="currentColor" viewBox="0 0 20 20" class="w-5 h-5">
+                    <path d="M8 9a3 3 0 116 0 3 3 0 01-6 0zM2 17a6 6 0 1112 0H2z" />
+                    <path d="M16 11v2m0 0v2m0-2h2m-2 0h-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </div>
+            <span class="font-medium">Start Evaluation</span>
+        </a>
+
         <!-- Divider -->
         <div class="border-t border-slate-600 my-4"></div>
 

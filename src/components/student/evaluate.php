@@ -8,6 +8,25 @@ if (!$student_id) {
     exit;
 }
 
+// Get active school year and semester
+$syRes = $conn->query("SELECT id, semester FROM school_years WHERE is_active = 1 LIMIT 1");
+$active_sy = $syRes ? $syRes->fetch_assoc() : null;
+
+$evaluation_period_active = false;
+if ($active_sy) {
+    $periodRes = $conn->prepare("SELECT * FROM faculty_evaluation_periods WHERE school_year_id = ? AND semester = ? AND evaluation_type = 'student' AND active = 1 LIMIT 1");
+    $periodRes->bind_param('is', $active_sy['id'], $active_sy['semester']);
+    $periodRes->execute();
+    $periodResult = $periodRes->get_result();
+    $evaluation_period_active = $periodResult->num_rows > 0;
+    $periodRes->close();
+}
+
+if (!$evaluation_period_active) {
+    echo '<div class="p-8 text-center text-yellow-600 font-semibold">Evaluation period is not active. Please wait for the evaluation to start.</div>';
+    exit;
+}
+
 // Get selected teacher and enrollment details
 $selected_enrollment_id = $_GET['enrollment_id'] ?? null;
 $selected_enrollment = null;
