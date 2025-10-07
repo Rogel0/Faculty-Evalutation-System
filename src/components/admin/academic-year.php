@@ -9,12 +9,14 @@ unset($_SESSION['success'], $_SESSION['error']);
 
 // Fetch existing academic years
 $rows = [];
+$anyActiveYear = false;
 try {
     $stmt = $conn->prepare("SELECT id, year, semester, start_date, end_date, is_active FROM school_years ORDER BY start_date DESC, id DESC");
     $stmt->execute();
     $result = $stmt->get_result();
     while ($r = $result->fetch_assoc()) {
         $rows[] = $r;
+        if ($r['is_active']) $anyActiveYear = true;
     }
     $stmt->close();
 } catch (Exception $e) {
@@ -56,8 +58,9 @@ try {
                     <td colspan="6" class="px-4 py-8 text-center text-gray-400">No academic years found</td>
                 </tr>
             <?php else: ?>
-                <?php $rowIndex = 0; foreach ($rows as $r): ?>
-                    <?php 
+                <?php $rowIndex = 0;
+                foreach ($rows as $r): ?>
+                    <?php
                     $startDate = new DateTime($r['start_date']);
                     $endDate = new DateTime($r['end_date']);
                     $now = new DateTime();
@@ -98,33 +101,18 @@ try {
                         </td>
                         <td class="px-4 py-3 whitespace-nowrap text-center border-b border-gray-100">
                             <div class="flex items-center justify-center gap-2">
-                                <!-- Toggle Active/Inactive Button -->
-                                <form method="POST" action="../actions/ToggleAcademicYear.php" style="display:inline-block;">
-                                    <input type="hidden" name="id" value="<?php echo $r['id']; ?>">
-                                    <input type="hidden" name="current_status" value="<?php echo $isActive ? '1' : '0'; ?>">
-                                    <button type="submit" class="inline-flex items-center px-3 py-1 rounded-lg <?php echo $isActive ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' : 'bg-green-100 text-green-800 hover:bg-green-200'; ?> font-semibold text-xs transition">
-                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <?php if ($isActive): ?>
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            <?php else: ?>
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h8m2-4a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            <?php endif; ?>
-                                        </svg>
-                                        <?php echo $isActive ? 'Deactivate' : 'Activate'; ?>
-                                    </button>
-                                </form>
-                                
-                                <button class="editYearBtn inline-flex items-center px-3 py-1 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 font-semibold text-xs transition" 
-                                        data-id="<?php echo $r['id']; ?>">
+
+                                <button class="editYearBtn inline-flex items-center px-3 py-1 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 font-semibold text-xs transition"
+                                    data-id="<?php echo $r['id']; ?>" <?php if ($anyActiveYear && !$isActive) echo 'disabled style="opacity:0.5;cursor:not-allowed"'; ?>>
                                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 13l6.293-6.293a1 1 0 011.414 0l1.586 1.586a1 1 0 010 1.414L11 17H9v-2z" />
                                     </svg>
                                     Edit
                                 </button>
-                                <form method="POST" action="../actions/DeleteAcademicYear.php" style="display:inline-block;" 
-                                      onsubmit="return confirm('Are you sure you want to delete this academic year?');">
+                                <form method="POST" action="../actions/DeleteAcademicYear.php" style="display:inline-block;"
+                                    onsubmit="return confirm('Are you sure you want to delete this academic year?');">
                                     <input type="hidden" name="id" value="<?php echo $r['id']; ?>">
-                                    <button type="submit" class="inline-flex items-center px-3 py-1 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 font-semibold text-xs transition">
+                                    <button type="submit" class="inline-flex items-center px-3 py-1 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 font-semibold text-xs transition" <?php if ($anyActiveYear && !$isActive) echo 'disabled style="opacity:0.5;cursor:not-allowed"'; ?>>
                                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                         </svg>
@@ -134,7 +122,8 @@ try {
                             </div>
                         </td>
                     </tr>
-                <?php $rowIndex++; endforeach; ?>
+                <?php $rowIndex++;
+                endforeach; ?>
             <?php endif; ?>
         </tbody>
     </table>
@@ -148,58 +137,58 @@ try {
             <h3 class="text-xl font-semibold text-gray-800" id="modalTitle">Add Academic Year</h3>
             <button type="button" id="ay_cancel" class="px-3 py-1 rounded hover:bg-gray-100 transition text-gray-600">×</button>
         </div>
-        
+
         <!-- Modal Body -->
         <form id="yearForm" method="POST" action="../actions/AddAcademicYear.php" class="p-6 space-y-4">
             <input type="hidden" name="id" id="ay_id">
-            
+
             <!-- Academic Year -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Academic Year</label>
-                <input type="text" name="year" id="ay_year" 
-                       class="w-full rounded-lg border-gray-300 focus:border-amber-500 focus:ring-amber-200 px-4 py-2.5 shadow-sm" 
-                       placeholder="e.g., 2025-2026" required>
+                <input type="text" name="year" id="ay_year"
+                    class="w-full rounded-lg border-gray-300 focus:border-amber-500 focus:ring-amber-200 px-4 py-2.5 shadow-sm"
+                    placeholder="e.g., 2025-2026" required>
             </div>
-            
+
             <!-- Semester -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Semester</label>
-                <select name="semester" id="ay_semester" 
-                        class="w-full rounded-lg border-gray-300 focus:border-amber-500 focus:ring-amber-200 px-4 py-2.5 shadow-sm">
+                <select name="semester" id="ay_semester"
+                    class="w-full rounded-lg border-gray-300 focus:border-amber-500 focus:ring-amber-200 px-4 py-2.5 shadow-sm">
                     <option value="1st Semester">1st Semester</option>
                     <option value="2nd Semester">2nd Semester</option>
                     <option value="Summer">Summer</option>
                     <option value="Midyear">Midyear</option>
                 </select>
             </div>
-            
+
             <!-- Date Range -->
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
-                    <input type="date" name="start_date" id="ay_start_date" 
-                           class="w-full rounded-lg border-gray-300 focus:border-amber-500 focus:ring-amber-200 px-4 py-2.5 shadow-sm" 
-                           required>
+                    <input type="date" name="start_date" id="ay_start_date"
+                        class="w-full rounded-lg border-gray-300 focus:border-amber-500 focus:ring-amber-200 px-4 py-2.5 shadow-sm"
+                        required>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
-                    <input type="date" name="end_date" id="ay_end_date" 
-                           class="w-full rounded-lg border-gray-300 focus:border-amber-500 focus:ring-amber-200 px-4 py-2.5 shadow-sm" 
-                           required>
+                    <input type="date" name="end_date" id="ay_end_date"
+                        class="w-full rounded-lg border-gray-300 focus:border-amber-500 focus:ring-amber-200 px-4 py-2.5 shadow-sm"
+                        required>
                 </div>
             </div>
-            
+
             <!-- Active Status -->
             <!-- Removed checkbox - using toggle button in table instead -->
-            
+
             <!-- Submit Button -->
             <div class="flex justify-end gap-3 pt-4">
-                <button type="button" onclick="closeModal()" 
-                        class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition">
+                <button type="button" onclick="closeModal()"
+                    class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition">
                     Cancel
                 </button>
-                <button type="submit" 
-                        class="px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg font-semibold transition">
+                <button type="submit"
+                    class="px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg font-semibold transition" <?php if ($anyActiveYear) echo 'disabled style="opacity:0.5;cursor:not-allowed"'; ?>>
                     <span id="submitBtnText">Save Academic Year</span>
                 </button>
             </div>
@@ -208,98 +197,98 @@ try {
 </div>
 
 <script>
-// Modal functionality
-const modal = document.getElementById('yearModal');
-const addBtn = document.getElementById('addYearBtn');
-const cancelBtn = document.getElementById('ay_cancel');
-const form = document.getElementById('yearForm');
-const modalTitle = document.getElementById('modalTitle');
-const submitBtnText = document.getElementById('submitBtnText');
+    // Modal functionality
+    const modal = document.getElementById('yearModal');
+    const addBtn = document.getElementById('addYearBtn');
+    const cancelBtn = document.getElementById('ay_cancel');
+    const form = document.getElementById('yearForm');
+    const modalTitle = document.getElementById('modalTitle');
+    const submitBtnText = document.getElementById('submitBtnText');
 
-// Open modal for adding
-addBtn.addEventListener('click', function() {
-    resetForm();
-    modalTitle.textContent = 'Add Academic Year';
-    submitBtnText.textContent = 'Save Academic Year';
-    modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-});
-
-// Close modal
-function closeModal() {
-    modal.style.display = 'none';
-    document.body.style.overflow = 'auto';
-}
-
-cancelBtn.addEventListener('click', closeModal);
-
-// Close modal on backdrop click
-modal.addEventListener('click', function(e) {
-    if (e.target === modal) {
-        closeModal();
-    }
-});
-
-// Reset form
-function resetForm() {
-    form.reset();
-    document.getElementById('ay_id').value = '';
-}
-
-// Edit functionality
-document.querySelectorAll('.editYearBtn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-        const id = this.getAttribute('data-id');
-        modalTitle.textContent = 'Edit Academic Year';
-        submitBtnText.textContent = 'Update Academic Year';
-        
-        // Fetch data
-        fetch('../../actions/GetAcademicYear.php?id=' + id)
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById('ay_id').value = data.id;
-                document.getElementById('ay_year').value = data.year;
-                document.getElementById('ay_semester').value = data.semester;
-                document.getElementById('ay_start_date').value = data.start_date;
-                document.getElementById('ay_end_date').value = data.end_date;
-                modal.style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-            })
-            .catch(err => {
-                alert('Failed to load academic year data');
-                console.error(err);
-            });
+    // Open modal for adding
+    addBtn.addEventListener('click', function() {
+        resetForm();
+        modalTitle.textContent = 'Add Academic Year';
+        submitBtnText.textContent = 'Save Academic Year';
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
     });
-});
 
-// Form validation
-form.addEventListener('submit', function(e) {
-    const startDate = new Date(document.getElementById('ay_start_date').value);
-    const endDate = new Date(document.getElementById('ay_end_date').value);
-    
-    if (endDate <= startDate) {
-        e.preventDefault();
-        alert('End date must be after start date');
-        return false;
+    // Close modal
+    function closeModal() {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
     }
-    
-    // Show loading state
-    submitBtnText.textContent = 'Saving...';
-});
 
-// Close modal on Escape key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && modal.style.display === 'flex') {
-        closeModal();
+    cancelBtn.addEventListener('click', closeModal);
+
+    // Close modal on backdrop click
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Reset form
+    function resetForm() {
+        form.reset();
+        document.getElementById('ay_id').value = '';
     }
-});
 
-// Show toast messages
-<?php if ($successMsg): ?>
-    showToast("<?php echo addslashes($successMsg); ?>", "success");
-<?php endif; ?>
+    // Edit functionality
+    document.querySelectorAll('.editYearBtn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            modalTitle.textContent = 'Edit Academic Year';
+            submitBtnText.textContent = 'Update Academic Year';
 
-<?php if ($errorMsg): ?>
-    showToast("<?php echo addslashes($errorMsg); ?>", "error");
-<?php endif; ?>
+            // Fetch data
+            fetch('../../actions/GetAcademicYear.php?id=' + id)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('ay_id').value = data.id;
+                    document.getElementById('ay_year').value = data.year;
+                    document.getElementById('ay_semester').value = data.semester;
+                    document.getElementById('ay_start_date').value = data.start_date;
+                    document.getElementById('ay_end_date').value = data.end_date;
+                    modal.style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                })
+                .catch(err => {
+                    alert('Failed to load academic year data');
+                    console.error(err);
+                });
+        });
+    });
+
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        const startDate = new Date(document.getElementById('ay_start_date').value);
+        const endDate = new Date(document.getElementById('ay_end_date').value);
+
+        if (endDate <= startDate) {
+            e.preventDefault();
+            alert('End date must be after start date');
+            return false;
+        }
+
+        // Show loading state
+        submitBtnText.textContent = 'Saving...';
+    });
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal.style.display === 'flex') {
+            closeModal();
+        }
+    });
+
+    // Show toast messages
+    <?php if ($successMsg): ?>
+        showToast("<?php echo addslashes($successMsg); ?>", "success");
+    <?php endif; ?>
+
+    <?php if ($errorMsg): ?>
+        showToast("<?php echo addslashes($errorMsg); ?>", "error");
+    <?php endif; ?>
 </script>
