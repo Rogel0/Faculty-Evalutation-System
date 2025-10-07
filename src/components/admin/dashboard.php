@@ -144,7 +144,7 @@ try {
             GROUP BY e.teacher_id, u.firstname, u.lastname
             HAVING evaluation_count >= 1
             ORDER BY avg_rating DESC
-            LIMIT 10
+            LIMIT 3
         ";
     } else {
         $teacher_query = "
@@ -157,7 +157,7 @@ try {
             GROUP BY e.teacher_id, u.firstname, u.lastname
             HAVING evaluation_count >= 1
             ORDER BY avg_rating DESC
-            LIMIT 10
+            LIMIT 3
         ";
     }
 
@@ -519,7 +519,7 @@ try {
             </div>
         </div>
 
-        <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
+        <!-- <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
             <div class="flex items-center justify-between">
                 <div>
                     <h3 class="text-sm font-medium opacity-90">Total Evaluations</h3>
@@ -545,9 +545,9 @@ try {
                     </svg>
                 </div>
             </div>
-        </div>
+        </div> -->
 
-        <div class="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg shadow-lg p-6 text-white">
+        <!-- <div class="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg shadow-lg p-6 text-white">
             <div class="flex items-center justify-between">
                 <div>
                     <h3 class="text-sm font-medium opacity-90">Total Subjects</h3>
@@ -559,7 +559,7 @@ try {
                     </svg>
                 </div>
             </div>
-        </div>
+        </div> -->
     </div>
 
     <!-- Peer Evaluation Analytics -->
@@ -620,8 +620,8 @@ try {
     </div>
 
     <!-- Charts Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <!-- Evaluations by Strand Chart -->
+    <!-- <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
         <div class="bg-white rounded-lg shadow-lg p-6">
             <h3 class="text-xl font-semibold text-gray-900 mb-4">Evaluations by Strand</h3>
             <div class="relative h-80">
@@ -629,14 +629,14 @@ try {
             </div>
         </div>
 
-        <!-- Rating Distribution Chart -->
+
         <div class="bg-white rounded-lg shadow-lg p-6">
             <h3 class="text-xl font-semibold text-gray-900 mb-4">Rating Distribution</h3>
             <div class="relative h-80">
                 <canvas id="ratingChart"></canvas>
             </div>
         </div>
-    </div>
+    </div> -->
 
     <!-- Full Width Charts -->
     <div class="grid grid-cols-1 gap-6 mb-8">
@@ -809,7 +809,7 @@ try {
     </div>
 
     <!-- Management Actions -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="bg-white rounded-lg shadow-lg p-6">
             <div class="flex items-center mb-4">
                 <div class="p-2 bg-blue-100 rounded-lg">
@@ -839,7 +839,7 @@ try {
                 Manage Academic Years
             </a>
         </div>
-    </div>
+    </div> -->
 </div>
 
 <!-- Chart.js and Custom Scripts -->
@@ -861,82 +861,82 @@ try {
     const strandValues = strandData.map(item => parseInt(item.evaluation_count));
 
     // Strand Chart
-    const strandCtx = document.getElementById('strandChart').getContext('2d');
-    new Chart(strandCtx, {
-        type: 'doughnut',
-        data: {
-            labels: strandLabels,
-            datasets: [{
-                data: strandValues,
-                backgroundColor: [
-                    chartColors.primary,
-                    chartColors.success,
-                    chartColors.warning,
-                    chartColors.danger,
-                    chartColors.info,
-                    chartColors.purple
-                ],
-                borderWidth: 2,
-                borderColor: '#fff'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 20,
-                        usePointStyle: true
-                    }
-                }
-            }
-        }
-    });
+    // const strandCtx = document.getElementById('strandChart').getContext('2d');
+    // new Chart(strandCtx, {
+    //     type: 'doughnut',
+    //     data: {
+    //         labels: strandLabels,
+    //         datasets: [{
+    //             data: strandValues,
+    //             backgroundColor: [
+    //                 chartColors.primary,
+    //                 chartColors.success,
+    //                 chartColors.warning,
+    //                 chartColors.danger,
+    //                 chartColors.info,
+    //                 chartColors.purple
+    //             ],
+    //             borderWidth: 2,
+    //             borderColor: '#fff'
+    //         }]
+    //     },
+    //     options: {
+    //         responsive: true,
+    //         maintainAspectRatio: false,
+    //         plugins: {
+    //             legend: {
+    //                 position: 'bottom',
+    //                 labels: {
+    //                     padding: 20,
+    //                     usePointStyle: true
+    //                 }
+    //             }
+    //         }
+    //     }
+    // });
 
     // Rating Distribution Chart
     const ratingData = <?php echo json_encode($rating_distribution); ?>;
     const ratingLabels = ratingData.map(item => `${item.rating} Stars`);
-    const ratingValues = ratingData.map(item => parseInt(item.count));
+    // const ratingValues = ratingData.map(item => parseInt(item.count));
 
-    const ratingCtx = document.getElementById('ratingChart').getContext('2d');
-    new Chart(ratingCtx, {
-        type: 'bar',
-        data: {
-            labels: ratingLabels,
-            datasets: [{
-                label: 'Number of Ratings',
-                data: ratingValues,
-                backgroundColor: chartColors.primary,
-                borderColor: chartColors.primary,
-                borderWidth: 1,
-                borderRadius: 8
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: {
-                        color: '#F3F4F6'
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false
-                    }
-                }
-            }
-        }
-    });
+    // const ratingCtx = document.getElementById('ratingChart').getContext('2d');
+    // new Chart(ratingCtx, {
+    //     type: 'bar',
+    //     data: {
+    //         labels: ratingLabels,
+    //         datasets: [{
+    //             label: 'Number of Ratings',
+    //             data: ratingValues,
+    //             backgroundColor: chartColors.primary,
+    //             borderColor: chartColors.primary,
+    //             borderWidth: 1,
+    //             borderRadius: 8
+    //         }]
+    //     },
+    //     options: {
+    //         responsive: true,
+    //         maintainAspectRatio: false,
+    //         plugins: {
+    //             legend: {
+    //                 display: false
+    //             }
+    //         },
+    //         scales: {
+    //             y: {
+    //                 beginAtZero: true,
+    //                 grid: {
+    //                     color: '#F3F4F6'
+    //                 }
+    //             },
+    //             x: {
+    //                 grid: {
+    //                     display: false
+    //                 }
+    //             }
+    //         }
+    //     }
+    // });
 
     // Yearly Performance Chart
     const yearlyData = <?php echo json_encode($yearly_ratings); ?>;
