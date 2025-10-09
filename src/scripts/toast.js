@@ -1,4 +1,4 @@
-function showToast(message, type = 'error') {
+function showToast(message, type = "error") {
   const colors = {
     error: "#FF4D4D", // Red for errors
     success: "#28A745", // Green for success

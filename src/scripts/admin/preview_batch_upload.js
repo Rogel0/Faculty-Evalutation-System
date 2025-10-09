@@ -52,19 +52,37 @@ function handleFilePreview(input) {
       const tableBody = document.getElementById("previewTableBody");
       tableBody.innerHTML = "";
 
-  data.preview.forEach((student) => {
+      data.preview.forEach((student) => {
         const row = document.createElement("tr");
         // PHP preview returns keys: student_id, firstname, lastname, middle_name, email, birthdate, strand, grade_level, subjects (array)
-        const subjects = Array.isArray(student.subjects) ? student.subjects.join(', ') : (student.subject_codes || '');
+        const subjects = Array.isArray(student.subjects)
+          ? student.subjects.join(", ")
+          : student.subject_codes || "";
         row.innerHTML = `
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${student.student_id || ''}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${student.firstname || ''}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${student.lastname || ''}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${student.middlename || ''}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${student.email || ''}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${student.birthdate || ''}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${student.strand || ''}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${student.grade_level || ''}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
+                  student.student_id || ""
+                }</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
+                  student.firstname || ""
+                }</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
+                  student.lastname || ""
+                }</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
+                  student.middlename || ""
+                }</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
+                  student.email || ""
+                }</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
+                  student.birthdate || ""
+                }</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
+                  student.strand || ""
+                }</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
+                  student.grade_level || ""
+                }</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${subjects}</td>
             `;
         tableBody.appendChild(row);

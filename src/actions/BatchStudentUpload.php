@@ -45,66 +45,66 @@ try {
     }
 
     // Validate file type
-        $fileExtension = strtolower(pathinfo($_FILES[$fileKey]['name'], PATHINFO_EXTENSION));
+    $fileExtension = strtolower(pathinfo($_FILES[$fileKey]['name'], PATHINFO_EXTENSION));
 
-        // For preview: be lenient and handle CSV without PhpSpreadsheet to avoid dependency/mime issues
-        if ($isPreview) {
-            if ($fileExtension === 'csv') {
-                $rows = [];
-                if (($handle = fopen($_FILES[$fileKey]['tmp_name'], 'r')) !== false) {
-                    while (($data = fgetcsv($handle)) !== false) {
-                        $rows[] = $data;
-                    }
-                    fclose($handle);
-                } else {
-                    $buffer = ob_get_clean();
-                    $msg = 'Failed to open CSV file for preview.';
-                    if (!empty($buffer)) $msg .= ' | Output: ' . strip_tags($buffer);
-                    echo json_encode(['success' => false, 'error' => $msg]);
-                    exit;
+    // For preview: be lenient and handle CSV without PhpSpreadsheet to avoid dependency/mime issues
+    if ($isPreview) {
+        if ($fileExtension === 'csv') {
+            $rows = [];
+            if (($handle = fopen($_FILES[$fileKey]['tmp_name'], 'r')) !== false) {
+                while (($data = fgetcsv($handle)) !== false) {
+                    $rows[] = $data;
                 }
+                fclose($handle);
             } else {
-                // Try using PhpSpreadsheet for xls/xlsx previews but catch errors
-                try {
-                    $spreadsheet = IOFactory::load($_FILES[$fileKey]['tmp_name']);
-                    $worksheet = $spreadsheet->getActiveSheet();
-                    $rows = $worksheet->toArray();
-                } catch (Exception $e) {
-                    $buffer = ob_get_clean();
-                    $msg = 'Failed to read spreadsheet for preview: ' . $e->getMessage();
-                    if (!empty($buffer)) $msg .= ' | Output: ' . strip_tags($buffer);
-                    echo json_encode(['success' => false, 'error' => $msg]);
-                    exit;
-                }
+                $buffer = ob_get_clean();
+                $msg = 'Failed to open CSV file for preview.';
+                if (!empty($buffer)) $msg .= ' | Output: ' . strip_tags($buffer);
+                echo json_encode(['success' => false, 'error' => $msg]);
+                exit;
             }
         } else {
-            // For actual upload: perform basic validation then use PhpSpreadsheet for any format
-            $allowedTypes = [
-                'application/vnd.ms-excel',
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'text/csv'
-            ];
-
-            $finfo = finfo_open(FILEINFO_MIME_TYPE);
-            $mimeType = finfo_file($finfo, $_FILES[$fileKey]['tmp_name']);
-            finfo_close($finfo);
-
-            if (!in_array($mimeType, $allowedTypes) && !in_array($fileExtension, ['xlsx', 'xls', 'csv'])) {
-                throw new Exception('Invalid file type. Please upload an Excel file (.xlsx, .xls) or CSV file');
-            }
-
+            // Try using PhpSpreadsheet for xls/xlsx previews but catch errors
             try {
                 $spreadsheet = IOFactory::load($_FILES[$fileKey]['tmp_name']);
                 $worksheet = $spreadsheet->getActiveSheet();
                 $rows = $worksheet->toArray();
             } catch (Exception $e) {
                 $buffer = ob_get_clean();
-                $msg = 'Failed to read spreadsheet: ' . $e->getMessage();
+                $msg = 'Failed to read spreadsheet for preview: ' . $e->getMessage();
                 if (!empty($buffer)) $msg .= ' | Output: ' . strip_tags($buffer);
                 echo json_encode(['success' => false, 'error' => $msg]);
                 exit;
             }
         }
+    } else {
+        // For actual upload: perform basic validation then use PhpSpreadsheet for any format
+        $allowedTypes = [
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'text/csv'
+        ];
+
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $_FILES[$fileKey]['tmp_name']);
+        finfo_close($finfo);
+
+        if (!in_array($mimeType, $allowedTypes) && !in_array($fileExtension, ['xlsx', 'xls', 'csv'])) {
+            throw new Exception('Invalid file type. Please upload an Excel file (.xlsx, .xls) or CSV file');
+        }
+
+        try {
+            $spreadsheet = IOFactory::load($_FILES[$fileKey]['tmp_name']);
+            $worksheet = $spreadsheet->getActiveSheet();
+            $rows = $worksheet->toArray();
+        } catch (Exception $e) {
+            $buffer = ob_get_clean();
+            $msg = 'Failed to read spreadsheet: ' . $e->getMessage();
+            if (!empty($buffer)) $msg .= ' | Output: ' . strip_tags($buffer);
+            echo json_encode(['success' => false, 'error' => $msg]);
+            exit;
+        }
+    }
 
     // Remove header row
     array_shift($rows);
@@ -234,7 +234,11 @@ try {
             if (isset($student['subject_codes'])) {
                 $submitted = array_filter(array_map('trim', explode(',', $student['subject_codes'])));
                 // Normalize to unique non-empty codes (uppercased for comparison)
-                $submitted = array_values(array_unique(array_filter(array_map(function($v){ return strtoupper(trim($v)); }, $submitted), function($v){ return $v !== ''; })));
+                $submitted = array_values(array_unique(array_filter(array_map(function ($v) {
+                    return strtoupper(trim($v));
+                }, $submitted), function ($v) {
+                    return $v !== '';
+                })));
 
                 // Determine current school year id (use active, fallback to latest)
                 $school_year_id = null;

@@ -21,12 +21,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
       try {
         previewData = await readFileData(file);
-  displayPreview(previewData);
-  if (uploadButton) uploadButton.disabled = false;
+        displayPreview(previewData);
+        if (uploadButton) uploadButton.disabled = false;
       } catch (error) {
         console.error("Error reading file:", error);
         // show a friendly toast
-        showToast('Error reading file. Please try again.', 'error');
+        showToast("Error reading file. Please try again.", "error");
       }
     });
   }
@@ -39,29 +39,37 @@ document.addEventListener("DOMContentLoaded", function () {
         const formData = new FormData();
         formData.append("batch_file", fileInput.files[0]);
 
-        const response = await fetch("/faculty_evaluation/src/actions/BatchStudentUpload.php", {
-          method: "POST",
-          body: formData,
-        });
+        const response = await fetch(
+          "/faculty_evaluation/src/actions/BatchStudentUpload.php",
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
 
         const result = await response.json();
 
         if (result.success) {
           modal.classList.add("hidden");
           if (result.warnings && result.warnings.length > 0) {
-            const msgs = result.warnings.map(w => w.student_id + ': ' + w.warnings.join(', ')).join(' | ');
-            showToast('Upload completed with warnings: ' + msgs, 'error');
+            const msgs = result.warnings
+              .map((w) => w.student_id + ": " + w.warnings.join(", "))
+              .join(" | ");
+            showToast("Upload completed with warnings: " + msgs, "error");
           } else {
-            showToast('Students uploaded successfully', 'success');
+            showToast("Students uploaded successfully", "success");
           }
         } else {
           // display server-provided error via toast (avoid alert/raw JSON)
-          const msg = result && result.error ? result.error : 'Upload failed';
-          showToast(msg, 'error');
+          const msg = result && result.error ? result.error : "Upload failed";
+          showToast(msg, "error");
         }
       } catch (error) {
         console.error("Error uploading:", error);
-        showToast(error.message || "Error uploading file. Please try again.", 'error');
+        showToast(
+          error.message || "Error uploading file. Please try again.",
+          "error"
+        );
       }
     });
   }
@@ -72,32 +80,38 @@ document.addEventListener("DOMContentLoaded", function () {
       formData.append("file", file);
       formData.append("preview", "true");
 
-        const response = await fetch("/faculty_evaluation/src/actions/BatchStudentUpload.php", {
+      const response = await fetch(
+        "/faculty_evaluation/src/actions/BatchStudentUpload.php",
+        {
           method: "POST",
           body: formData,
-        });
-
-        const text = await response.text();
-        let result;
-        try {
-          result = JSON.parse(text);
-        } catch (err) {
-          // don't display raw JSON — show friendly toast instead
-          showToast('Invalid server response during preview. Please try again.', 'error');
-          throw new Error('Invalid server response');
         }
+      );
 
-        if (result.error) {
-          showToast(result.error, 'error');
-          throw new Error(result.error);
-        }
+      const text = await response.text();
+      let result;
+      try {
+        result = JSON.parse(text);
+      } catch (err) {
+        // don't display raw JSON — show friendly toast instead
+        showToast(
+          "Invalid server response during preview. Please try again.",
+          "error"
+        );
+        throw new Error("Invalid server response");
+      }
 
-        if (!result.preview) {
-          showToast('Preview data not found', 'error');
-          throw new Error('Preview data not found');
-        }
+      if (result.error) {
+        showToast(result.error, "error");
+        throw new Error(result.error);
+      }
 
-        return result.preview;
+      if (!result.preview) {
+        showToast("Preview data not found", "error");
+        throw new Error("Preview data not found");
+      }
+
+      return result.preview;
     } catch (error) {
       console.error("Preview error:", error);
       throw error;
@@ -172,7 +186,8 @@ document.addEventListener("DOMContentLoaded", function () {
       msgEl.textContent = message;
     } else {
       // ensure we don't clobber structure -- append or set text
-      if (toastElement.firstChild) toastElement.firstChild.textContent = message;
+      if (toastElement.firstChild)
+        toastElement.firstChild.textContent = message;
       else toastElement.textContent = message;
     }
 

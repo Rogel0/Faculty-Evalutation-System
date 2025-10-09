@@ -42,26 +42,26 @@ if (isset($_SESSION['errorLogin'])) {
 <script src="/faculty_evaluation/src/scripts/toast.js"></script>
 
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    <?php if (isset($_SESSION['errorLogin'])): ?>
-        showToast(<?php echo json_encode($_SESSION['errorLogin']); ?>, "error");
-        <?php unset($_SESSION['errorLogin']); ?>
-    <?php endif; ?>
+    document.addEventListener('DOMContentLoaded', function() {
+        <?php if (isset($_SESSION['errorLogin'])): ?>
+            showToast(<?php echo json_encode($_SESSION['errorLogin']); ?>, "error");
+            <?php unset($_SESSION['errorLogin']); ?>
+        <?php endif; ?>
 
-    <?php if (isset($_SESSION['error'])): ?>
-        showToast(<?php echo json_encode($_SESSION['error']); ?>, "error");
-        <?php unset($_SESSION['error']); ?>
-    <?php endif; ?>
+        <?php if (isset($_SESSION['error'])): ?>
+            showToast(<?php echo json_encode($_SESSION['error']); ?>, "error");
+            <?php unset($_SESSION['error']); ?>
+        <?php endif; ?>
 
-    <?php if (isset($_SESSION['success'])): ?>
-        showToast(<?php echo json_encode($_SESSION['success']); ?>, "success");
-        <?php unset($_SESSION['success']); ?>
-    <?php endif; ?>
-    <?php if (isset($_SESSION['warning'])): ?>
-        showToast(<?php echo json_encode($_SESSION['warning']); ?>, 'error');
-        <?php unset($_SESSION['warning']); ?>
-    <?php endif; ?>
-  });
+        <?php if (isset($_SESSION['success'])): ?>
+            showToast(<?php echo json_encode($_SESSION['success']); ?>, "success");
+            <?php unset($_SESSION['success']); ?>
+        <?php endif; ?>
+        <?php if (isset($_SESSION['warning'])): ?>
+            showToast(<?php echo json_encode($_SESSION['warning']); ?>, 'error');
+            <?php unset($_SESSION['warning']); ?>
+        <?php endif; ?>
+    });
 </script>
 
 <?php

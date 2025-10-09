@@ -23,14 +23,14 @@ include('auth/sessionCheck.php');
     <div class="min-h-screen flex">
         <div class="hidden lg:flex lg:w-3/5 relative overflow-hidden bg-gradient-to-br from-blue-900 via-indigo-800 to-purple-700">
             <!-- Background Image with Enhanced Styling -->
-            <div class="absolute inset-0 bg-cover bg-center bg-no-repeat z-5" 
-                 style="background-image: url('assets/images/login_bg.jpg'); 
+            <div class="absolute inset-0 bg-cover bg-center bg-no-repeat z-5"
+                style="background-image: url('assets/images/login_bg.jpg'); 
                         filter: brightness(0.8) contrast(1.1) saturate(0.9);">
             </div>
-            
+
             <!-- Enhanced Gradient Overlay for Better Text Readability -->
             <div class="absolute inset-0 bg-gradient-to-br from-blue-900/85 via-indigo-800/80 to-purple-700/85 z-10"></div>
-            
+
             <!-- Additional Subtle Overlay for Depth -->
             <div class="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/10 z-12"></div>
 
@@ -38,20 +38,20 @@ include('auth/sessionCheck.php');
             <div class="absolute inset-0 pointer-events-none z-15">
                 <!-- Large floating orb -->
                 <div class="absolute w-96 h-96 -top-20 -right-10 rounded-full bg-gradient-to-br from-amber-400/15 via-yellow-300/10 to-transparent animate-float-slow opacity-70 blur-xl"></div>
-                
+
                 <!-- Medium floating orb -->
                 <div class="absolute w-72 h-72 -bottom-15 -left-10 rounded-full bg-gradient-to-br from-yellow-400/12 via-amber-300/8 to-transparent animate-float-delayed opacity-60 blur-lg"></div>
-                
+
                 <!-- Small floating orb -->
                 <div class="absolute w-48 h-48 top-2/5 left-1/5 rounded-full bg-gradient-to-br from-yellow-300/10 via-amber-200/6 to-transparent animate-float opacity-50 blur-md"></div>
 
                 <!-- Geometric shapes for visual interest -->
-                <div class="absolute top-1/6 left-1/6 w-32 h-32 bg-gradient-to-br from-amber-400/20 to-yellow-500/10 opacity-30 animate-spin-slow blur-sm" 
-                     style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%); transform-origin: center;"></div>
-                
-                <div class="absolute bottom-1/4 right-1/5 w-24 h-24 bg-gradient-to-br from-yellow-400/15 to-amber-500/10 opacity-25 animate-spin-reverse blur-sm" 
-                     style="clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); transform-origin: center;"></div>
-                
+                <div class="absolute top-1/6 left-1/6 w-32 h-32 bg-gradient-to-br from-amber-400/20 to-yellow-500/10 opacity-30 animate-spin-slow blur-sm"
+                    style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%); transform-origin: center;"></div>
+
+                <div class="absolute bottom-1/4 right-1/5 w-24 h-24 bg-gradient-to-br from-yellow-400/15 to-amber-500/10 opacity-25 animate-spin-reverse blur-sm"
+                    style="clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); transform-origin: center;"></div>
+
                 <!-- Additional subtle elements -->
                 <div class="absolute top-1/3 right-1/3 w-16 h-16 bg-amber-300/8 rounded-full animate-pulse opacity-40"></div>
                 <div class="absolute bottom-1/3 left-1/4 w-20 h-20 bg-yellow-300/6 rounded-full animate-pulse opacity-30" style="animation-delay: 1.5s;"></div>
@@ -73,7 +73,7 @@ include('auth/sessionCheck.php');
                 <p class="text-blue-100/90 text-lg max-w-md leading-relaxed font-light tracking-wide">
                     Empowering educational excellence through comprehensive faculty assessment and development
                 </p>
-                
+
                 <!-- Simple decorative elements -->
                 <div class="mt-8 flex space-x-2">
                     <div class="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
@@ -86,12 +86,12 @@ include('auth/sessionCheck.php');
         <!-- Enhanced Right Side - Login Form -->
         <div class="w-full lg:w-2/5 flex items-center justify-center p-8 bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
             <!-- Subtle background pattern for desktop -->
-            <div class="hidden lg:block absolute inset-0 opacity-5" 
-                 style="background-image: radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%), 
+            <div class="hidden lg:block absolute inset-0 opacity-5"
+                style="background-image: radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%), 
                         radial-gradient(circle at 80% 20%, rgba(255, 206, 84, 0.3) 0%, transparent 50%), 
                         radial-gradient(circle at 40% 80%, rgba(120, 119, 198, 0.2) 0%, transparent 50%);">
             </div>
-            
+
             <!-- Mobile background (hidden on desktop) -->
             <div class="lg:hidden absolute inset-0 bg-gradient-to-br from-blue-900 via-indigo-800 to-purple-700"></div>
 
@@ -143,7 +143,7 @@ include('auth/sessionCheck.php');
                             <div class="error-message text-red-500 text-xs mt-2 hidden font-medium"></div>
                         </div>
 
-                      
+
 
                         <!-- Enhanced Sign In Button -->
                         <div class="pt-4">
