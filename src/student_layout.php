@@ -3,7 +3,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 if (isset($_SESSION['errorLogin'])) {
-    echo "<script>console.log('Error Login: " . $_SESSION['errorLogin'] . "');</script>";
+    // errorLogin present; handled via UI toast later
 }
 ?>
 
@@ -39,19 +39,21 @@ if (isset($_SESSION['errorLogin'])) {
 
 </body>
 
-<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+<script src="https://cdn.jsdelivr.net/npm/toastify-js@1.12.0/src/toastify.min.js"></script>
 <script src="/faculty_evaluation/src/scripts/toast.js"></script>
 
 <script>
+  document.addEventListener('DOMContentLoaded', function() {
     <?php if (isset($_SESSION['error'])): ?>
-        showToast(" <?php echo $_SESSION['error']; ?>", "error");
+        showToast(<?php echo json_encode($_SESSION['error']); ?>, "error");
         <?php unset($_SESSION['error']); ?>
     <?php endif; ?>
 
     <?php if (isset($_SESSION['success'])): ?>
-        showToast("<?php echo $_SESSION['success']; ?>", "success");
+        showToast(<?php echo json_encode($_SESSION['success']); ?>, "success");
         <?php unset($_SESSION['success']); ?>
     <?php endif; ?>
+  });
 </script>
 
 </html>

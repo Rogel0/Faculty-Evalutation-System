@@ -71,23 +71,23 @@ try {
         $total_subjects = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_subjects'] : 0;
     }
 
-    // Evaluations by course/strand (with filter)
+    // Evaluations by strand (with filter) - use 'strand' column from users table
     if ($selected_school_year !== 'all' && is_numeric($selected_school_year)) {
         $school_year_id = intval($selected_school_year);
         $strand_query = "
-            SELECT u.course, COUNT(e.id) as evaluation_count 
+            SELECT u.strand, COUNT(e.id) as evaluation_count 
             FROM evaluations e 
             JOIN users u ON e.evaluator_id = u.id 
-            WHERE e.evaluator_type = 'student' AND u.course IS NOT NULL AND e.school_year_id = $school_year_id
-            GROUP BY u.course
+            WHERE e.evaluator_type = 'student' AND u.strand IS NOT NULL AND e.school_year_id = $school_year_id
+            GROUP BY u.strand
         ";
     } else {
         $strand_query = "
-            SELECT u.course, COUNT(e.id) as evaluation_count 
+            SELECT u.strand, COUNT(e.id) as evaluation_count 
             FROM evaluations e 
             JOIN users u ON e.evaluator_id = u.id 
-            WHERE e.evaluator_type = 'student' AND u.course IS NOT NULL
-            GROUP BY u.course
+            WHERE e.evaluator_type = 'student' AND u.strand IS NOT NULL
+            GROUP BY u.strand
         ";
     }
 
@@ -95,7 +95,7 @@ try {
     $strand_data = [];
     if ($result && $result->num_rows > 0) {
         while ($row = $result->fetch_assoc()) {
-            $strand_data[] = ['strand' => $row['course'], 'evaluation_count' => $row['evaluation_count']];
+            $strand_data[] = ['strand' => $row['strand'], 'evaluation_count' => $row['evaluation_count']];
         }
     }
 
@@ -393,7 +393,7 @@ try {
     }
 } catch (Exception $e) {
     // Handle errors gracefully and log the error
-    echo "<script>console.log('Database Error: " . addslashes($e->getMessage()) . "');</script>";
+    // Database error logged server-side
     $total_students = $total_teachers = $total_evaluations = $total_peer_evaluations = $total_subjects = 0;
     $strand_data = $yearly_ratings = $top_teachers = $rating_distribution = $monthly_trends = [];
     $top_peer_teachers = $department_peer_data = $peer_coverage_data = [];
@@ -845,7 +845,7 @@ try {
 <!-- Chart.js and Custom Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Chart.js configurations and data
+    // Defensive chart rendering helpers
     const chartColors = {
         primary: '#3B82F6',
         success: '#10B981',
@@ -855,319 +855,287 @@ try {
         purple: '#8B5CF6'
     };
 
-    // Strand Chart Data
-    const strandData = <?php echo json_encode($strand_data); ?>;
-    const strandLabels = strandData.map(item => item.strand || 'Core');
-    const strandValues = strandData.map(item => parseInt(item.evaluation_count));
+    function safeInt(v, fallback = 0) {
+        const n = parseInt(v);
+        return Number.isFinite(n) ? n : fallback;
+    }
 
-    // Strand Chart
-    // const strandCtx = document.getElementById('strandChart').getContext('2d');
-    // new Chart(strandCtx, {
-    //     type: 'doughnut',
-    //     data: {
-    //         labels: strandLabels,
-    //         datasets: [{
-    //             data: strandValues,
-    //             backgroundColor: [
-    //                 chartColors.primary,
-    //                 chartColors.success,
-    //                 chartColors.warning,
-    //                 chartColors.danger,
-    //                 chartColors.info,
-    //                 chartColors.purple
-    //             ],
-    //             borderWidth: 2,
-    //             borderColor: '#fff'
-    //         }]
-    //     },
-    //     options: {
-    //         responsive: true,
-    //         maintainAspectRatio: false,
-    //         plugins: {
-    //             legend: {
-    //                 position: 'bottom',
-    //                 labels: {
-    //                     padding: 20,
-    //                     usePointStyle: true
-    //                 }
-    //             }
-    //         }
-    //     }
-    // });
+    function safeFloat(v, fallback = 0) {
+        const n = parseFloat(v);
+        return Number.isFinite(n) ? n : fallback;
+    }
 
-    // Rating Distribution Chart
-    const ratingData = <?php echo json_encode($rating_distribution); ?>;
-    const ratingLabels = ratingData.map(item => `${item.rating} Stars`);
-    // const ratingValues = ratingData.map(item => parseInt(item.count));
+    function getCtxIfExists(id) {
+        const el = document.getElementById(id);
+        if (!el) {
+            console.warn('Canvas not found:', id);
+            return null;
+        }
+        const ctx = el.getContext && el.getContext('2d');
+        if (!ctx) console.warn('Unable to get 2d context for:', id);
+        return ctx;
+    }
 
-    // const ratingCtx = document.getElementById('ratingChart').getContext('2d');
-    // new Chart(ratingCtx, {
-    //     type: 'bar',
-    //     data: {
-    //         labels: ratingLabels,
-    //         datasets: [{
-    //             label: 'Number of Ratings',
-    //             data: ratingValues,
-    //             backgroundColor: chartColors.primary,
-    //             borderColor: chartColors.primary,
-    //             borderWidth: 1,
-    //             borderRadius: 8
-    //         }]
-    //     },
-    //     options: {
-    //         responsive: true,
-    //         maintainAspectRatio: false,
-    //         plugins: {
-    //             legend: {
-    //                 display: false
-    //             }
-    //         },
-    //         scales: {
-    //             y: {
-    //                 beginAtZero: true,
-    //                 grid: {
-    //                     color: '#F3F4F6'
-    //                 }
-    //             },
-    //             x: {
-    //                 grid: {
-    //                     display: false
-    //                 }
-    //             }
-    //         }
-    //     }
-    // });
+    // Utility to safely map PHP arrays
+    const strandData = <?php echo json_encode($strand_data); ?> || [];
+    const ratingData = <?php echo json_encode($rating_distribution); ?> || [];
+    const yearlyData = <?php echo json_encode($yearly_ratings); ?> || [];
+    const monthlyData = <?php echo json_encode($monthly_trends); ?> || [];
+    const departmentPeerData = <?php echo json_encode($department_peer_data); ?> || [];
 
-    // Yearly Performance Chart
-    const yearlyData = <?php echo json_encode($yearly_ratings); ?>;
-    const yearlyLabels = yearlyData.map(item => `${item.year} (${item.semester})`);
-    const yearlyValues = yearlyData.map(item => parseFloat(item.avg_rating));
+    // Debug: print dataset summaries to console
+    console.groupCollapsed('Dashboard Data Summary');
+    // Debug logs removed for production
+    console.groupEnd();
 
-    const yearlyCtx = document.getElementById('yearlyChart').getContext('2d');
-    new Chart(yearlyCtx, {
-        type: 'line',
-        data: {
-            labels: yearlyLabels,
-            datasets: [{
-                label: 'Average Rating',
-                data: yearlyValues,
-                borderColor: chartColors.success,
-                backgroundColor: chartColors.success + '20',
-                borderWidth: 3,
-                fill: true,
-                tension: 0.4,
-                pointBackgroundColor: chartColors.success,
-                pointBorderColor: '#fff',
-                pointBorderWidth: 2,
-                pointRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                }
+    // Yearly Chart
+    (function() {
+        const yearlyCtx = getCtxIfExists('yearlyChart');
+        if (!yearlyCtx) return;
+
+        const labels = yearlyData.map(item => (item.year ? `${item.year} (${item.semester})` : 'N/A'));
+        const data = yearlyData.map(item => safeFloat(item.avg_rating, null));
+
+        new Chart(yearlyCtx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Average Rating',
+                    data: data,
+                    borderColor: chartColors.success,
+                    backgroundColor: chartColors.success + '20',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: chartColors.success,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6
+                }]
             },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 5,
-                    grid: {
-                        color: '#F3F4F6'
-                    },
-                    ticks: {
-                        stepSize: 0.5
-                    }
-                },
-                x: {
-                    grid: {
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
                         display: false
                     }
-                }
-            }
-        }
-    });
-
-    // Monthly Trends Chart
-    const monthlyData = <?php echo json_encode($monthly_trends); ?>;
-    const monthlyLabels = monthlyData.map(item => {
-        const date = new Date(item.month + '-01');
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short'
-        });
-    });
-    const monthlyEvaluations = monthlyData.map(item => parseInt(item.evaluation_count));
-    const monthlyRatings = monthlyData.map(item => parseFloat(item.avg_rating));
-
-    const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
-    new Chart(monthlyCtx, {
-        type: 'bar',
-        data: {
-            labels: monthlyLabels,
-            datasets: [{
-                label: 'Number of Evaluations',
-                data: monthlyEvaluations,
-                backgroundColor: chartColors.info + '80',
-                borderColor: chartColors.info,
-                borderWidth: 1,
-                yAxisID: 'y',
-                borderRadius: 6
-            }, {
-                label: 'Average Rating',
-                data: monthlyRatings,
-                type: 'line',
-                borderColor: chartColors.warning,
-                backgroundColor: chartColors.warning,
-                borderWidth: 3,
-                pointBackgroundColor: chartColors.warning,
-                pointBorderColor: '#fff',
-                pointBorderWidth: 2,
-                pointRadius: 6,
-                yAxisID: 'y1',
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            },
-            scales: {
-                y: {
-                    type: 'linear',
-                    display: true,
-                    position: 'left',
-                    beginAtZero: true,
-                    grid: {
-                        color: '#F3F4F6'
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 5,
+                        grid: {
+                            color: '#F3F4F6'
+                        },
+                        ticks: {
+                            stepSize: 0.5
+                        }
                     },
-                    title: {
-                        display: true,
-                        text: 'Number of Evaluations'
-                    }
-                },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    beginAtZero: true,
-                    max: 5,
-                    grid: {
-                        drawOnChartArea: false,
-                    },
-                    title: {
-                        display: true,
-                        text: 'Average Rating'
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false
-                    }
-                }
-            }
-        }
-    });
-
-    // Department Peer Ratings Chart
-    const departmentPeerData = <?php echo json_encode($department_peer_data); ?>;
-    const deptLabels = departmentPeerData.map(item => item.department);
-    const deptPeerCounts = departmentPeerData.map(item => parseInt(item.peer_evaluation_count));
-    const deptPeerRatings = departmentPeerData.map(item => parseFloat(item.avg_peer_rating));
-
-    const departmentPeerCtx = document.getElementById('departmentPeerChart').getContext('2d');
-    new Chart(departmentPeerCtx, {
-        type: 'bar',
-        data: {
-            labels: deptLabels,
-            datasets: [{
-                label: 'Peer Evaluations',
-                data: deptPeerCounts,
-                backgroundColor: chartColors.primary,
-                borderColor: chartColors.primary,
-                borderWidth: 1,
-                yAxisID: 'y'
-            }, {
-                label: 'Average Rating',
-                data: deptPeerRatings,
-                type: 'line',
-                backgroundColor: chartColors.warning,
-                borderColor: chartColors.warning,
-                borderWidth: 3,
-                fill: false,
-                tension: 0.4,
-                pointBackgroundColor: chartColors.warning,
-                pointBorderColor: '#fff',
-                pointBorderWidth: 2,
-                pointRadius: 6,
-                yAxisID: 'y1'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top',
-                    labels: {
-                        usePointStyle: true,
-                        padding: 20
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            if (context.datasetIndex === 0) {
-                                return 'Peer Evaluations: ' + context.parsed.y;
-                            } else {
-                                return 'Average Rating: ' + context.parsed.y.toFixed(2);
-                            }
+                    x: {
+                        grid: {
+                            display: false
                         }
                     }
                 }
+            }
+        });
+    })();
+
+    // Monthly Trends Chart
+    (function() {
+        const monthlyCtx = getCtxIfExists('monthlyChart');
+        if (!monthlyCtx) return;
+
+        const labels = monthlyData.map(item => {
+            if (!item || !item.month) return 'N/A';
+            // Expecting format YYYY-MM
+            try {
+                const date = new Date(item.month + '-01');
+                if (isNaN(date.getTime())) return item.month;
+                return date.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short'
+                });
+            } catch (e) {
+                return item.month;
+            }
+        });
+
+        const evalCounts = monthlyData.map(item => safeInt(item.evaluation_count, 0));
+        const avgRatings = monthlyData.map(item => safeFloat(item.avg_rating, null));
+
+        new Chart(monthlyCtx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Number of Evaluations',
+                    data: evalCounts,
+                    backgroundColor: chartColors.info + '80',
+                    borderColor: chartColors.info,
+                    borderWidth: 1,
+                    yAxisID: 'y',
+                    borderRadius: 6
+                }, {
+                    label: 'Average Rating',
+                    data: avgRatings,
+                    type: 'line',
+                    borderColor: chartColors.warning,
+                    backgroundColor: chartColors.warning,
+                    borderWidth: 3,
+                    pointBackgroundColor: chartColors.warning,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6,
+                    yAxisID: 'y1',
+                    tension: 0.4
+                }]
             },
-            scales: {
-                y: {
-                    type: 'linear',
-                    display: true,
-                    position: 'left',
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Number of Evaluations'
-                    },
-                    grid: {
-                        color: '#F3F4F6'
-                    }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
                 },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    beginAtZero: true,
-                    max: 5,
-                    title: {
+                scales: {
+                    y: {
+                        type: 'linear',
                         display: true,
-                        text: 'Average Rating'
+                        position: 'left',
+                        beginAtZero: true,
+                        grid: {
+                            color: '#F3F4F6'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Number of Evaluations'
+                        }
                     },
-                    grid: {
-                        drawOnChartArea: false,
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        beginAtZero: true,
+                        max: 5,
+                        grid: {
+                            drawOnChartArea: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Average Rating'
+                        }
                     },
-                    ticks: {
-                        stepSize: 0.5
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false
+                    x: {
+                        grid: {
+                            display: false
+                        }
                     }
                 }
             }
-        }
-    });
+        });
+    })();
+
+    // Department Peer Ratings Chart
+    (function() {
+        const deptCtx = getCtxIfExists('departmentPeerChart');
+        if (!deptCtx) return;
+
+        const labels = departmentPeerData.map(d => d.department || 'Unknown');
+        const counts = departmentPeerData.map(d => safeInt(d.peer_evaluation_count, 0));
+        const ratings = departmentPeerData.map(d => safeFloat(d.avg_peer_rating, null));
+
+        new Chart(deptCtx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Peer Evaluations',
+                    data: counts,
+                    backgroundColor: chartColors.primary,
+                    borderColor: chartColors.primary,
+                    borderWidth: 1,
+                    yAxisID: 'y'
+                }, {
+                    label: 'Average Rating',
+                    data: ratings,
+                    type: 'line',
+                    backgroundColor: chartColors.warning,
+                    borderColor: chartColors.warning,
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.4,
+                    pointBackgroundColor: chartColors.warning,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6,
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed && typeof context.parsed.y !== 'undefined' ? context.parsed.y : null;
+                                if (context.datasetIndex === 0) {
+                                    return 'Peer Evaluations: ' + (value !== null ? value : 'N/A');
+                                } else {
+                                    return 'Average Rating: ' + (value !== null ? Number(value).toFixed(2) : 'N/A');
+                                }
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Evaluations'
+                        },
+                        grid: {
+                            color: '#F3F4F6'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        beginAtZero: true,
+                        max: 5,
+                        title: {
+                            display: true,
+                            text: 'Average Rating'
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        },
+                        ticks: {
+                            stepSize: 0.5
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    })();
 </script>

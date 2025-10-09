@@ -1,0 +1,6 @@
+Student ID,First Name,Last Name,Email,Course,Year Level,Section,Subjects,Teachers
+20230001,Juan,Dela Cruz,juan.delacruz@email.com,BSIT,1,A,"Math, English, Science","Mr. Santos, Ms. Reyes, Mr. Cruz"
+20230002,Maria,Santos,maria.santos@email.com,BSIT,1,A,"Math, English, Science","Mr. Santos, Ms. Reyes, Mr. Cruz"
+20230003,Jose,Reyes,jose.reyes@email.com,BSIT,1,B,"Math, Filipino, Science","Mr. Santos, Ms. Dela Rosa, Mr. Cruz"
+20230004,Ana,Cruz,ana.cruz@email.com,BSIT,2,A,"Math, English, History","Mr. Santos, Ms. Reyes, Ms. Garcia"
+20230005,Pedro,Garcia,pedro.garcia@email.com,BSIT,2,B,"Math, Filipino, History","Mr. Santos, Ms. Dela Rosa, Ms. Garcia"

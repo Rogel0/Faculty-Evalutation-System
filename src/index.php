@@ -163,7 +163,7 @@ include('auth/sessionCheck.php');
     <div id="messageContainer" class="fixed top-4 right-4 z-50"></div>
 </body>
 <script src="scripts/loading.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+<script src="https://cdn.jsdelivr.net/npm/toastify-js@1.12.0/src/toastify.min.js"></script>
 <script src="/faculty_evaluation/src/scripts/toast.js"></script>
 <script>
     <?php if (isset($_SESSION['error'])): ?>
