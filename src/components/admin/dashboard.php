@@ -34,11 +34,25 @@ try {
         // Filtered counts for specific school year
         $school_year_id = intval($selected_school_year);
 
-        $result = $conn->query("SELECT COUNT(DISTINCT e.evaluator_id) as total_students FROM evaluations e WHERE e.evaluator_type = 'student' AND e.school_year_id = $school_year_id");
-        $total_students = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_students'] : 0;
+        // Count students enrolled in the selected school year (if enrollments exist)
+        $result = $conn->query("SELECT COUNT(DISTINCT u.id) as total_students FROM users u JOIN student_enrollments se ON se.student_id = u.id WHERE u.user_type = 'student' AND se.school_year_id = $school_year_id");
+        if ($result && $result->num_rows > 0) {
+            $total_students = $result->fetch_assoc()['total_students'];
+        } else {
+            // Fallback to counting all students if no enrollments found for the year
+            $result = $conn->query("SELECT COUNT(*) as total_students FROM users WHERE user_type = 'student'");
+            $total_students = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_students'] : 0;
+        }
 
-        $result = $conn->query("SELECT COUNT(DISTINCT e.teacher_id) as total_teachers FROM evaluations e WHERE e.school_year_id = $school_year_id");
-        $total_teachers = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_teachers'] : 0;
+        // Count teachers assigned in the selected school year (if teacher_subjects exists)
+        $result = $conn->query("SELECT COUNT(DISTINCT u.id) as total_teachers FROM users u JOIN teacher_subjects ts ON ts.teacher_id = u.id WHERE u.user_type = 'teacher' AND ts.school_year_id = $school_year_id");
+        if ($result && $result->num_rows > 0) {
+            $total_teachers = $result->fetch_assoc()['total_teachers'];
+        } else {
+            // Fallback to counting all teachers
+            $result = $conn->query("SELECT COUNT(*) as total_teachers FROM users WHERE user_type = 'teacher'");
+            $total_teachers = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_teachers'] : 0;
+        }
 
         $result = $conn->query("SELECT COUNT(*) as total_evaluations FROM evaluations e WHERE e.school_year_id = $school_year_id");
         $total_evaluations = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_evaluations'] : 0;
@@ -48,6 +62,14 @@ try {
 
         $result = $conn->query("SELECT COUNT(DISTINCT e.subject_id) as total_subjects FROM evaluations e WHERE e.school_year_id = $school_year_id");
         $total_subjects = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_subjects'] : 0;
+
+        // Students who have submitted evaluations (distinct student evaluators)
+        $result = $conn->query("SELECT COUNT(DISTINCT e.evaluator_id) as students_evaluated FROM evaluations e WHERE e.evaluator_type = 'student' AND e.school_year_id = $school_year_id");
+        $students_evaluated = $result && $result->num_rows > 0 ? $result->fetch_assoc()['students_evaluated'] : 0;
+
+        // Teachers who have submitted peer evaluations (distinct teacher evaluators)
+        $result = $conn->query("SELECT COUNT(DISTINCT e.evaluator_id) as teachers_evaluated FROM evaluations e WHERE e.evaluator_type = 'teacher' AND e.school_year_id = $school_year_id");
+        $teachers_evaluated = $result && $result->num_rows > 0 ? $result->fetch_assoc()['teachers_evaluated'] : 0;
 
         // If no data for this school year, show message
         if ($total_evaluations == 0) {
@@ -69,6 +91,14 @@ try {
 
         $result = $conn->query("SELECT COUNT(*) as total_subjects FROM subjects");
         $total_subjects = $result && $result->num_rows > 0 ? $result->fetch_assoc()['total_subjects'] : 0;
+
+        // Overall students who have submitted evaluations
+        $result = $conn->query("SELECT COUNT(DISTINCT e.evaluator_id) as students_evaluated FROM evaluations e WHERE e.evaluator_type = 'student'");
+        $students_evaluated = $result && $result->num_rows > 0 ? $result->fetch_assoc()['students_evaluated'] : 0;
+
+        // Overall teachers who have submitted peer evaluations
+        $result = $conn->query("SELECT COUNT(DISTINCT e.evaluator_id) as teachers_evaluated FROM evaluations e WHERE e.evaluator_type = 'teacher'");
+        $teachers_evaluated = $result && $result->num_rows > 0 ? $result->fetch_assoc()['teachers_evaluated'] : 0;
     }
 
     // Evaluations by strand (with filter) - use 'strand' column from users table
@@ -99,36 +129,60 @@ try {
         }
     }
 
-    // Average ratings by school year (filtered or all)
+    // Average ratings by Department and Strand (grouped aggregation for chart)
+    // This replaces the old yearly aggregation and will power a comparison chart between departments and strands
     if ($selected_school_year !== 'all' && is_numeric($selected_school_year)) {
         $school_year_id = intval($selected_school_year);
-        $yearly_query = "
-            SELECT sy.year, sy.semester, ROUND(AVG(CAST(e.answer AS DECIMAL)), 2) as avg_rating,
-                   COUNT(e.id) as total_evaluations
-            FROM evaluations e 
-            JOIN school_years sy ON e.school_year_id = sy.id
+        $dept_strand_query = "
+            SELECT u.department AS department, u.strand AS strand, 
+                   ROUND(AVG(CAST(e.answer AS DECIMAL)), 2) AS avg_rating,
+                   COUNT(e.id) AS total_evaluations
+            FROM evaluations e
+            JOIN users u ON e.teacher_id = u.id
             WHERE e.answer REGEXP '^[0-5]$' AND e.school_year_id = $school_year_id
-            GROUP BY sy.year, sy.semester
-            ORDER BY sy.year, sy.semester
+            GROUP BY u.department, u.strand
+            ORDER BY u.department, u.strand
         ";
     } else {
-        $yearly_query = "
-            SELECT sy.year, sy.semester, ROUND(AVG(CAST(e.answer AS DECIMAL)), 2) as avg_rating,
-                   COUNT(e.id) as total_evaluations
-            FROM evaluations e 
-            JOIN school_years sy ON e.school_year_id = sy.id
+        $dept_strand_query = "
+            SELECT u.department AS department, u.strand AS strand, 
+                   ROUND(AVG(CAST(e.answer AS DECIMAL)), 2) AS avg_rating,
+                   COUNT(e.id) AS total_evaluations
+            FROM evaluations e
+            JOIN users u ON e.teacher_id = u.id
             WHERE e.answer REGEXP '^[0-5]$'
-            GROUP BY sy.year, sy.semester
-            ORDER BY sy.year, sy.semester
+            GROUP BY u.department, u.strand
+            ORDER BY u.department, u.strand
         ";
     }
 
-    $result = $conn->query($yearly_query);
-    $yearly_ratings = [];
+    $result = $conn->query($dept_strand_query);
+    $dept_strand_data = [];
     if ($result && $result->num_rows > 0) {
         while ($row = $result->fetch_assoc()) {
-            $yearly_ratings[] = $row;
+            $dept_strand_data[] = $row;
         }
+    }
+
+    // Also prepare aggregated data for departments (avg & count) and strands (avg & count)
+    if (isset($school_year_id) && is_numeric($school_year_id)) {
+        $dept_agg_query = "SELECT u.department AS department, ROUND(AVG(CAST(e.answer AS DECIMAL)),2) AS avg_rating, COUNT(e.id) AS total_evaluations FROM evaluations e JOIN users u ON e.teacher_id = u.id WHERE e.answer REGEXP '^[0-5]$' AND e.school_year_id = $school_year_id GROUP BY u.department ORDER BY u.department";
+        $strand_agg_query = "SELECT u.strand AS strand, ROUND(AVG(CAST(e.answer AS DECIMAL)),2) AS avg_rating, COUNT(e.id) AS total_evaluations FROM evaluations e JOIN users u ON e.teacher_id = u.id WHERE e.answer REGEXP '^[0-5]$' AND e.school_year_id = $school_year_id GROUP BY u.strand ORDER BY u.strand";
+    } else {
+        $dept_agg_query = "SELECT u.department AS department, ROUND(AVG(CAST(e.answer AS DECIMAL)),2) AS avg_rating, COUNT(e.id) AS total_evaluations FROM evaluations e JOIN users u ON e.teacher_id = u.id WHERE e.answer REGEXP '^[0-5]$' GROUP BY u.department ORDER BY u.department";
+        $strand_agg_query = "SELECT u.strand AS strand, ROUND(AVG(CAST(e.answer AS DECIMAL)),2) AS avg_rating, COUNT(e.id) AS total_evaluations FROM evaluations e JOIN users u ON e.teacher_id = u.id WHERE e.answer REGEXP '^[0-5]$' GROUP BY u.strand ORDER BY u.strand";
+    }
+
+    $dept_agg_res = $conn->query($dept_agg_query);
+    $dept_agg_data = [];
+    if ($dept_agg_res && $dept_agg_res->num_rows > 0) {
+        while ($r = $dept_agg_res->fetch_assoc()) $dept_agg_data[] = $r;
+    }
+
+    $strand_agg_res = $conn->query($strand_agg_query);
+    $strand_agg_data = [];
+    if ($strand_agg_res && $strand_agg_res->num_rows > 0) {
+        while ($r = $strand_agg_res->fetch_assoc()) $strand_agg_data[] = $r;
     }
 
     // Top performing teachers (with filter)
@@ -519,6 +573,34 @@ try {
             </div>
         </div>
 
+        <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg shadow-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-medium opacity-90">Students Evaluated</h3>
+                    <p class="text-3xl font-bold"><?php echo number_format($students_evaluated ?? 0); ?></p>
+                </div>
+                <div class="p-3 bg-white bg-opacity-20 rounded-full">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M8 9a3 3 0 100-6 3 3 0 000 6zm4 0a3 3 0 100-6 3 3 0 000 6zM2 17a6 6 0 0112 0H2z" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg shadow-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-medium opacity-90">Teachers Evaluated</h3>
+                    <p class="text-3xl font-bold"><?php echo number_format($teachers_evaluated ?? 0); ?></p>
+                </div>
+                <div class="p-3 bg-white bg-opacity-20 rounded-full">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 3a3 3 0 100 6 3 3 0 000-6zM4 13a6 6 0 1112 0H4z" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+
         <!-- <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
             <div class="flex items-center justify-between">
                 <div>
@@ -641,10 +723,37 @@ try {
     <!-- Full Width Charts -->
     <div class="grid grid-cols-1 gap-6 mb-8">
         <!-- Yearly Performance Trends -->
-        <div class="bg-white rounded-lg shadow-lg p-6">
-            <h3 class="text-xl font-semibold text-gray-900 mb-4">Average Ratings by School Year</h3>
-            <div class="relative h-96">
-                <canvas id="yearlyChart"></canvas>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-semibold text-gray-900">Department Comparison</h3>
+                    <div class="flex items-center gap-2">
+                        <label for="deptMetric" class="text-sm text-gray-600">Compare by:</label>
+                        <select id="deptMetric" class="px-2 py-1 border rounded text-sm">
+                            <option value="avg">Average Rating</option>
+                            <option value="count">Number of Evaluations</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="relative h-80">
+                    <canvas id="deptChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-semibold text-gray-900">Strand Comparison</h3>
+                    <div class="flex items-center gap-2">
+                        <label for="strandMetric" class="text-sm text-gray-600">Compare by:</label>
+                        <select id="strandMetric" class="px-2 py-1 border rounded text-sm">
+                            <option value="avg">Average Rating</option>
+                            <option value="count">Number of Evaluations</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="relative h-80">
+                    <canvas id="strandChart"></canvas>
+                </div>
             </div>
         </div>
 
@@ -879,7 +988,9 @@ try {
     // Utility to safely map PHP arrays
     const strandData = <?php echo json_encode($strand_data); ?> || [];
     const ratingData = <?php echo json_encode($rating_distribution); ?> || [];
-    const yearlyData = <?php echo json_encode($yearly_ratings); ?> || [];
+    const deptStrandData = <?php echo json_encode($dept_strand_data); ?> || [];
+    const deptAggData = <?php echo json_encode($dept_agg_data); ?> || [];
+    const strandAggData = <?php echo json_encode($strand_agg_data); ?> || [];
     const monthlyData = <?php echo json_encode($monthly_trends); ?> || [];
     const departmentPeerData = <?php echo json_encode($department_peer_data); ?> || [];
 
@@ -888,58 +999,71 @@ try {
     // Debug logs removed for production
     console.groupEnd();
 
-    // Yearly Chart
+    // Department and Strand comparison charts
     (function() {
-        const yearlyCtx = getCtxIfExists('yearlyChart');
-        if (!yearlyCtx) return;
-
-        const labels = yearlyData.map(item => (item.year ? `${item.year} (${item.semester})` : 'N/A'));
-        const data = yearlyData.map(item => safeFloat(item.avg_rating, null));
-
-        new Chart(yearlyCtx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Average Rating',
-                    data: data,
-                    borderColor: chartColors.success,
-                    backgroundColor: chartColors.success + '20',
-                    borderWidth: 3,
-                    fill: true,
-                    tension: 0.4,
-                    pointBackgroundColor: chartColors.success,
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2,
-                    pointRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
+        // Helper to create a simple bar chart from flat agg data
+        function createFlatBarChart(canvasId, dataArray, labelKey, metricKey, metricLabel) {
+            const ctx = getCtxIfExists(canvasId);
+            if (!ctx) return null;
+            const labels = dataArray.map(r => r[labelKey] || 'Unknown');
+            const data = dataArray.map(r => metricKey === 'avg' ? safeFloat(r['avg_rating'], null) : safeInt(r['total_evaluations'], 0));
+            return new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: metricLabel,
+                        data: data,
+                        backgroundColor: chartColors.primary,
+                        borderColor: chartColors.primary
+                    }]
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 5,
-                        grid: {
-                            color: '#F3F4F6'
-                        },
-                        ticks: {
-                            stepSize: 0.5
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
                         }
                     },
-                    x: {
-                        grid: {
-                            display: false
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: metricLabel
+                            },
+                            max: metricKey === 'avg' ? 5 : undefined
                         }
                     }
                 }
-            }
+            });
+        }
+
+        // Department chart
+        let deptChart = null;
+
+        function renderDept(metric) {
+            if (deptChart) deptChart.destroy();
+            deptChart = createFlatBarChart('deptChart', deptAggData, 'department', metric, metric === 'avg' ? 'Average Rating' : 'Number of Evaluations');
+        }
+        renderDept('avg');
+        const deptSelect = document.getElementById('deptMetric');
+        if (deptSelect) deptSelect.addEventListener('change', function() {
+            renderDept(this.value);
+        });
+
+        // Strand chart
+        let strandChart = null;
+
+        function renderStrand(metric) {
+            if (strandChart) strandChart.destroy();
+            strandChart = createFlatBarChart('strandChart', strandAggData, 'strand', metric, metric === 'avg' ? 'Average Rating' : 'Number of Evaluations');
+        }
+        renderStrand('avg');
+        const strandSelect = document.getElementById('strandMetric');
+        if (strandSelect) strandSelect.addEventListener('change', function() {
+            renderStrand(this.value);
         });
     })();
 
