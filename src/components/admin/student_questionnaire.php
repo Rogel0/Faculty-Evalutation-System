@@ -22,6 +22,14 @@ if ($questionsResult) {
         $questionsData[$row['name']][] = $row;
     }
 }
+
+// Check if evaluation period is ongoing
+// Check if student evaluation period is ongoing
+$evaluation_ongoing = false;
+$periodResult = $conn->query("SELECT id FROM faculty_evaluation_periods WHERE active = 1 AND evaluation_type = 'student' LIMIT 1");
+if ($periodResult && $periodResult->num_rows > 0) {
+    $evaluation_ongoing = true;
+}
 ?>
 
 <!-- Include Toastify CSS and JS -->
@@ -46,7 +54,7 @@ if ($questionsResult) {
                 <div>
                     <label for="qn-criteria" class="block text-sm font-medium text-gray-700 mb-2">Criteria</label>
                     <div class="relative flex items-center">
-                        <select name="qn-criteria" id="qn-criteria" required
+                        <select name="qn-criteria" id="qn-criteria" required <?php if ($evaluation_ongoing) echo 'disabled style="opacity:0.5;cursor:not-allowed"'; ?>
                             class="w-full px-4 py-3 bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-colors appearance-none">
                             <option value="">Please select here</option>
                             <?php foreach ($criteriaOptions as $criteria): ?>
@@ -59,17 +67,16 @@ if ($questionsResult) {
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <button type="button" onclick="document.getElementById('addCriteriaModal').style.display='block'" class="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs" title="Add Criteria">+
+                        <button type="button" onclick="document.getElementById('addCriteriaModal').style.display='block'" class="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs" title="Add Criteria" <?php if ($evaluation_ongoing) echo 'disabled style="opacity:0.5;cursor:not-allowed"'; ?>>+
                         </button>
                     </div>
                     <p class="text-xs text-gray-500 mt-1">Select existing criteria to add more questions to it</p>
                 </div>
 
-
                 <!-- Question Input -->
                 <div>
                     <label for="qn-question" class="block text-sm font-medium text-gray-700 mb-2">Question</label>
-                    <textarea name="qn-question" id="qn-question" rows="8" required
+                    <textarea name="qn-question" id="qn-question" rows="8" required <?php if ($evaluation_ongoing) echo 'disabled style="opacity:0.5;cursor:not-allowed"'; ?>
                         placeholder="Input here..."
                         class="w-full px-4 py-3 bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-colors resize-none"></textarea>
                     <p class="text-xs text-gray-500 mt-1">This question will be added to the selected criteria</p>
@@ -77,7 +84,7 @@ if ($questionsResult) {
 
                 <!-- Submit Button -->
                 <button type="submit" name="submitQuestionBtn"
-                    class="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold py-3 px-6 rounded-md transition-colors duration-200 shadow-sm">
+                    class="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold py-3 px-6 rounded-md transition-colors duration-200 shadow-sm" <?php if ($evaluation_ongoing) echo 'disabled style="opacity:0.5;cursor:not-allowed"'; ?>>
                     Add Question
                 </button>
             </form>
@@ -144,7 +151,7 @@ if ($questionsResult) {
                                                 </div>
                                                 <form action="../actions/DeleteQuestion.php" method="POST" onsubmit="return confirm('Are you sure you want to delete this question?');">
                                                     <input type="hidden" name="question_id" value="<?php echo $question['id']; ?>">
-                                                    <button type="submit" class="ml-4 p-2 bg-red-500 hover:bg-red-600 text-white rounded transition-colors duration-150 flex items-center" title="Delete">
+                                                    <button type="submit" class="ml-4 p-2 bg-red-500 hover:bg-red-600 text-white rounded transition-colors duration-150 flex items-center" title="Delete" <?php if ($evaluation_ongoing) echo 'disabled style="opacity:0.5;cursor:not-allowed"'; ?>>
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m5 0H4" />
                                                         </svg>
@@ -155,7 +162,7 @@ if ($questionsResult) {
                                         <?php for ($rating = 5; $rating >= 1; $rating--): ?>
                                             <div class="col-span-1 p-2 text-center border-r border-gray-300 last:border-r-0">
                                                 <input type="radio" name="q_<?php echo $question['id']; ?>" value="<?php echo $rating; ?>"
-                                                    class="w-3.5 h-3.5 text-yellow-500 focus:ring-yellow-500 focus:ring-2">
+                                                    class="w-3.5 h-3.5 text-yellow-500 focus:ring-yellow-500 focus:ring-2" <?php if ($evaluation_ongoing) echo 'disabled'; ?>>
                                             </div>
                                         <?php endfor; ?>
                                     </div>

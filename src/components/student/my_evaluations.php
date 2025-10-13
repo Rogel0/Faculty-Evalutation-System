@@ -32,7 +32,7 @@ if (isset($_GET['eval_id']) && isset($_GET['teacher_id']) && isset($_GET['subjec
     $eval_teacher_id = (int)$_GET['teacher_id'];
     $eval_subject_id = (int)$_GET['subject_id'];
     $eval_school_year_id = isset($_GET['school_year_id']) ? (int)$_GET['school_year_id'] : null;
-    
+
     // Get detailed evaluation data
     $detailQuery = "
     SELECT 
@@ -54,7 +54,7 @@ if (isset($_GET['eval_id']) && isset($_GET['teacher_id']) && isset($_GET['subjec
     " . ($eval_school_year_id ? "AND e.school_year_id = ?" : "AND e.school_year_id IS NULL") . "
     AND e.evaluator_type = 'student'
     ORDER BY c.name, q.id";
-    
+
     $detailStmt = $conn->prepare($detailQuery);
     if ($eval_school_year_id) {
         $detailStmt->bind_param('iiii', $student_id, $eval_teacher_id, $eval_subject_id, $eval_school_year_id);
@@ -63,7 +63,7 @@ if (isset($_GET['eval_id']) && isset($_GET['teacher_id']) && isset($_GET['subjec
     }
     $detailStmt->execute();
     $detailResult = $detailStmt->get_result();
-    
+
     while ($row = $detailResult->fetch_assoc()) {
         if (!$selectedEvaluation) {
             $selectedEvaluation = [
@@ -77,7 +77,7 @@ if (isset($_GET['eval_id']) && isset($_GET['teacher_id']) && isset($_GET['subjec
                 'created_at' => $row['created_at']
             ];
         }
-        
+
         if (!isset($selectedEvaluationDetails[$row['criteria_name']])) {
             $selectedEvaluationDetails[$row['criteria_name']] = [];
         }
@@ -127,13 +127,13 @@ $evaluationsResult = $evaluationsStmt->get_result();
 while ($row = $evaluationsResult->fetch_assoc()) {
     $schoolYear = $row['school_year'] ?? 'Unknown Year';
     $semester = $row['semester'] ?? 'Unknown Semester';
-    
+
     // Create a more structured key to ensure proper separation
     $periodKey = $schoolYear . ' - ' . $semester;
-    
+
     // Sort by school year first, then semester
     $sortKey = str_pad($schoolYear, 10, '0', STR_PAD_LEFT) . '_' . $semester;
-    
+
     if (!isset($evaluationsData[$periodKey])) {
         $evaluationsData[$periodKey] = [
             'year' => $schoolYear,
@@ -144,14 +144,14 @@ while ($row = $evaluationsResult->fetch_assoc()) {
             'evaluations' => []
         ];
     }
-    
+
     $evaluationsData[$periodKey]['evaluations'][] = $row;
     $totalEvaluations++;
 }
 $evaluationsStmt->close();
 
 // Sort periods by school year and semester (most recent first)
-uasort($evaluationsData, function($a, $b) {
+uasort($evaluationsData, function ($a, $b) {
     return strcmp($b['sort_key'], $a['sort_key']);
 });
 
@@ -174,111 +174,111 @@ $statsStmt->close();
 ?>
 
 <style>
-.no-scroll::-webkit-scrollbar {
-    width: 6px;
-}
-
-.no-scroll::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-}
-
-.no-scroll::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 3px;
-}
-
-.no-scroll::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
-}
-
-.rating-stars {
-    display: flex;
-    gap: 2px;
-    align-items: center;
-}
-
-.star {
-    width: 16px;
-    height: 16px;
-    fill: #e5e7eb;
-    flex-shrink: 0;
-}
-
-.star.filled {
-    fill: #fbbf24;
-}
-
-.evaluation-card {
-    transition: all 0.2s ease;
-    height: auto;
-    min-height: 200px;
-    display: flex;
-    flex-direction: column;
-}
-
-.evaluation-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
-}
-
-.card-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-
-/* Ensure proper visibility for all elements */
-.period-header {
-    background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
-    position: relative;
-    z-index: 1;
-}
-
-.evaluation-grid {
-    display: grid;
-    gap: 1rem;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-}
-
-/* Mobile responsive fixes */
-@media (max-width: 768px) {
-    .mobile-card-padding {
-        padding: 16px;
+    .no-scroll::-webkit-scrollbar {
+        width: 6px;
     }
-    
+
+    .no-scroll::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+
+    .no-scroll::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+    }
+
+    .no-scroll::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+
+    .rating-stars {
+        display: flex;
+        gap: 2px;
+        align-items: center;
+    }
+
+    .star {
+        width: 16px;
+        height: 16px;
+        fill: #e5e7eb;
+        flex-shrink: 0;
+    }
+
+    .star.filled {
+        fill: #fbbf24;
+    }
+
+    .evaluation-card {
+        transition: all 0.2s ease;
+        height: auto;
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .evaluation-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    /* Ensure proper visibility for all elements */
+    .period-header {
+        background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+        position: relative;
+        z-index: 1;
+    }
+
     .evaluation-grid {
-        grid-template-columns: 1fr;
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     }
-    
-    .evaluation-card {
-        min-height: 180px;
-    }
-    
-    .rating-stars .star {
-        width: 14px;
-        height: 14px;
-    }
-}
 
-@media (max-width: 640px) {
-    .evaluation-card {
-        margin-bottom: 1rem;
+    /* Mobile responsive fixes */
+    @media (max-width: 768px) {
+        .mobile-card-padding {
+            padding: 16px;
+        }
+
+        .evaluation-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .evaluation-card {
+            min-height: 180px;
+        }
+
+        .rating-stars .star {
+            width: 14px;
+            height: 14px;
+        }
     }
-}
 
-/* Ensure text is visible */
-.text-visible {
-    color: #374151 !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-}
+    @media (max-width: 640px) {
+        .evaluation-card {
+            margin-bottom: 1rem;
+        }
+    }
 
-.bg-visible {
-    background-color: white !important;
-    opacity: 1 !important;
-}
+    /* Ensure text is visible */
+    .text-visible {
+        color: #374151 !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    .bg-visible {
+        background-color: white !important;
+        opacity: 1 !important;
+    }
 </style>
 
 <div class="w-full max-h-[92vh] p-0">
@@ -319,7 +319,7 @@ $statsStmt->close();
                 </ol>
             </nav>
         <?php endif; ?>
-        
+
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="text-xl md:text-2xl font-bold text-gray-900">
@@ -379,21 +379,21 @@ $statsStmt->close();
                         <h3 class="font-semibold text-gray-900 mb-4">Academic Period</h3>
                         <div class="space-y-2">
                             <p class="text-gray-700">
-                                <span class="font-medium">School Year:</span> 
+                                <span class="font-medium">School Year:</span>
                                 <?php echo htmlspecialchars($selectedEvaluation['school_year'] ?? 'N/A'); ?>
                             </p>
                             <p class="text-gray-700">
-                                <span class="font-medium">Semester:</span> 
+                                <span class="font-medium">Semester:</span>
                                 <?php echo htmlspecialchars($selectedEvaluation['semester'] ?? 'N/A'); ?>
                             </p>
                             <?php if ($selectedEvaluation['start_date'] && $selectedEvaluation['end_date']): ?>
                                 <p class="text-gray-700">
-                                    <span class="font-medium">Period:</span> 
+                                    <span class="font-medium">Period:</span>
                                     <?php echo date('M Y', strtotime($selectedEvaluation['start_date'])); ?> - <?php echo date('M Y', strtotime($selectedEvaluation['end_date'])); ?>
                                 </p>
                             <?php endif; ?>
                             <p class="text-gray-700">
-                                <span class="font-medium">Completed:</span> 
+                                <span class="font-medium">Completed:</span>
                                 <?php echo date('F j, Y \a\t g:i A', strtotime($selectedEvaluation['created_at'])); ?>
                             </p>
                         </div>
@@ -429,12 +429,12 @@ $statsStmt->close();
                                                 </div>
                                             </div>
                                             <div class="rating-stars">
-                                                <?php 
+                                                <?php
                                                 $rating = (int)$question['answer'];
-                                                for ($i = 1; $i <= 5; $i++): 
+                                                for ($i = 1; $i <= 5; $i++):
                                                 ?>
                                                     <svg class="star <?php echo $i <= $rating ? 'filled' : ''; ?>" viewBox="0 0 24 24">
-                                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                                                     </svg>
                                                 <?php endfor; ?>
                                             </div>
@@ -453,202 +453,152 @@ $statsStmt->close();
             </div>
         </div>
     <?php else: ?>
-    
 
-    <?php if (empty($evaluationsData)): ?>
-        <!-- No Evaluations State -->
-        <div class="text-center py-12 bg-white rounded-lg shadow-md mx-2 md:mx-0">
-            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                </svg>
-            </div>
-            <h3 class="text-xl font-semibold text-gray-900 mb-2">No Evaluations Yet</h3>
-            <p class="text-gray-600 mb-6">You haven't completed any evaluations yet.</p>
-            <a href="?module=evaluate_teacher" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                </svg>
-                Start Evaluating
-            </a>
-        </div>
-    <?php else: ?>
-        <!-- Evaluations History -->
-        <div class="space-y-6 px-2 md:px-0">
-            <?php foreach ($evaluationsData as $periodKey => $periodData): ?>
-                <div class="bg-white rounded-lg shadow-lg overflow-hidden">
-                    <div class="period-header text-white p-4 md:p-6">
-                        <div class="flex flex-col md:flex-row md:justify-between md:items-center">
-                            <div>
-                                <h2 class="text-lg md:text-xl font-bold text-white">
-                                    School Year <?php echo htmlspecialchars($periodData['year']); ?>
-                                </h2>
-                                <p class="text-gray-200 text-sm md:text-base">
-                                    <?php echo htmlspecialchars($periodData['semester']); ?> Semester
-                                    <?php if ($periodData['start_date'] && $periodData['end_date']): ?>
-                                        • <?php echo date('M Y', strtotime($periodData['start_date'])); ?> - <?php echo date('M Y', strtotime($periodData['end_date'])); ?>
-                                    <?php endif; ?>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Evaluations Grid -->
-                    <div class="p-4 md:p-6 bg-gray-50">
-                        <div class="evaluation-grid">
-                            <?php foreach ($periodData['evaluations'] as $evaluation): ?>
-                                <div class="evaluation-card bg-visible rounded-lg p-4 border border-gray-200 shadow-sm">
-                                    <div class="card-content">
-                                        <!-- Teacher Info -->
-                                        <div class="flex items-center space-x-3 mb-3">
-                                            <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                                                <span class="text-white font-bold text-sm">
-                                                    <?php echo strtoupper(substr($evaluation['teacher_firstname'], 0, 1)); ?>
-                                                </span>
-                                            </div>
-                                            <div class="flex-1 min-w-0">
-                                                <h3 class="font-semibold text-gray-900 truncate text-visible">
-                                                    <?php echo htmlspecialchars($evaluation['teacher_firstname'] . ' ' . $evaluation['teacher_lastname']); ?>
-                                                </h3>
-                                                <p class="text-sm text-gray-600 truncate text-visible">
-                                                    <?php echo htmlspecialchars($evaluation['subject_name']); ?>
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <!-- Subject Code -->
-                                        <?php if ($evaluation['subject_code']): ?>
-                                            <div class="mb-3">
-                                                <span class="inline-block bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded">
-                                                    <?php echo htmlspecialchars($evaluation['subject_code']); ?>
-                                                </span>
-                                            </div>
-                                        <?php endif; ?>
-
-                                        <!-- Rating Display -->
-                                        <div class="mb-3">
-                                            <div class="flex items-center justify-between mb-2">
-                                                <span class="text-sm font-medium text-gray-700 text-visible">Average Rating</span>
-                                                <span class="text-sm font-bold text-gray-900 text-visible">
-                                                    <?php echo number_format($evaluation['average_rating'] ?? 0, 1); ?>/5.0
-                                                </span>
-                                            </div>
-                                            <div class="rating-stars">
-                                                <?php 
-                                                $rating = round($evaluation['average_rating'] ?? 0);
-                                                for ($i = 1; $i <= 5; $i++): 
-                                                ?>
-                                                    <svg class="star <?php echo $i <= $rating ? 'filled' : ''; ?>" viewBox="0 0 24 24">
-                                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                                                    </svg>
-                                                <?php endfor; ?>
-                                            </div>
-                                        </div>
-
-                                        <!-- Questions Count -->
-                                        <div class="mb-3">
-                                            <div class="flex items-center text-sm text-gray-600 text-visible">
-                                                <svg class="w-4 h-4 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                </svg>
-                                                <?php echo $evaluation['total_questions'] ?? 0; ?> questions answered
-                                            </div>
-                                        </div>
-
-                                        <!-- Evaluation Date and Actions -->
-                                        <div class="pt-3 border-t border-gray-200 mt-auto space-y-3">
-                                            <div class="flex items-center justify-between text-xs text-gray-500 text-visible">
-                                                <span>Completed</span>
-                                                <span><?php echo date('M j, Y', strtotime($evaluation['created_at'])); ?></span>
-                                            </div>
-                                            
-                                            <!-- View Details Button -->
-                                            <div class="w-full">
-                                                <?php 
-                                                $school_year_param = !empty($evaluation['school_year_id']) 
-                                                    ? '&school_year_id=' . (int)$evaluation['school_year_id']
-                                                    : '';
-                                                ?>
-                                                <a href="?module=my-evaluations&eval_id=<?php echo $evaluation['evaluation_id']; ?>&teacher_id=<?php echo $evaluation['teacher_id']; ?>&subject_id=<?php echo $evaluation['subject_id']; ?><?php echo $school_year_param; ?>" 
-                                                   class="w-full inline-flex items-center justify-center px-3 py-2 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors duration-200">
-                                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                                    </svg>
-                                                    View Details
-                                                </a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
+        <?php if (empty($evaluationsData)): ?>
+            <!-- No Evaluations State -->
+            <div class="text-center py-12 bg-white rounded-lg shadow-md mx-2 md:mx-0">
+                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
                 </div>
-            <?php endforeach; ?>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="mt-8 text-center px-2 md:px-0">
-            <div class="bg-white rounded-lg p-6 shadow-md">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Continue Evaluating</h3>
-                <p class="text-gray-600 mb-6">Help improve the quality of education by providing more feedback.</p>
-                <a href="?module=evaluate_teacher" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium">
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">No Evaluations Yet</h3>
+                <p class="text-gray-600 mb-6">You haven't completed any evaluations yet.</p>
+                <a href="?module=evaluate_teacher" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                     </svg>
-                    Evaluate More Teachers
+                    Start Evaluating
                 </a>
             </div>
-        </div>
-    <?php endif; ?>
+        <?php else: ?>
+            <!-- Evaluations History -->
+            <div class="space-y-6 px-2 md:px-0">
+                <?php foreach ($evaluationsData as $periodKey => $periodData): ?>
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                        <div class="period-header text-white p-4 md:p-6">
+                            <div class="flex flex-col md:flex-row md:justify-between md:items-center">
+                                <div>
+                                    <h2 class="text-lg md:text-xl font-bold text-white">
+                                        School Year <?php echo htmlspecialchars($periodData['year']); ?>
+                                    </h2>
+                                    <p class="text-gray-200 text-sm md:text-base">
+                                        <?php echo htmlspecialchars($periodData['semester']); ?> Semester
+                                        <?php if ($periodData['start_date'] && $periodData['end_date']): ?>
+                                            • <?php echo date('M Y', strtotime($periodData['start_date'])); ?> - <?php echo date('M Y', strtotime($periodData['end_date'])); ?>
+                                        <?php endif; ?>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Evaluations Table -->
+                        <div class="p-4 md:p-6 bg-gray-50">
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-white">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Teacher</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Avg Rating</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Questions</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Completed</th>
+                                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <?php foreach ($periodData['evaluations'] as $evaluation): ?>
+                                            <tr>
+                                                <td class="px-4 py-3 whitespace-nowrap">
+                                                    <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($evaluation['teacher_firstname'] . ' ' . $evaluation['teacher_lastname']); ?></div>
+                                                </td>
+                                                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600"><?php echo htmlspecialchars($evaluation['subject_name']); ?><?php if ($evaluation['subject_code']): ?> <span class="ml-2 inline-block text-xs text-gray-400">(<?php echo htmlspecialchars($evaluation['subject_code']); ?>)</span><?php endif; ?></td>
+                                                <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900"><?php echo number_format($evaluation['average_rating'] ?? 0, 2); ?>/5</td>
+                                                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600"><?php echo (int)$evaluation['total_questions']; ?></td>
+                                                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600"><?php echo date('M j, Y', strtotime($evaluation['created_at'])); ?></td>
+                                                <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                                                    <?php
+                                                    $school_year_param = !empty($evaluation['school_year_id'])
+                                                        ? '&school_year_id=' . (int)$evaluation['school_year_id']
+                                                        : '';
+                                                    $pdfUrl = '/src/actions/GenerateStudentEvaluationPdf.php?teacher_id=' . (int)$evaluation['teacher_id'] . '&subject_id=' . (int)$evaluation['subject_id'] . $school_year_param;
+                                                    $viewUrl = '?module=my-evaluations&eval_id=' . (int)$evaluation['evaluation_id'] . '&teacher_id=' . (int)$evaluation['teacher_id'] . '&subject_id=' . (int)$evaluation['subject_id'] . $school_year_param;
+                                                    ?>
+                                                    <a href="<?php echo $viewUrl; ?>" class="text-blue-600 hover:text-blue-800 mr-3">View</a>
+                                                    <a href="#" onclick="window.open('<?php echo $pdfUrl; ?>','_blank'); return false;" class="text-gray-800 bg-gray-100 px-2 py-1 rounded text-sm">PDF</a>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="mt-8 text-center px-2 md:px-0">
+                <div class="bg-white rounded-lg p-6 shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Continue Evaluating</h3>
+                    <p class="text-gray-600 mb-6">Help improve the quality of education by providing more feedback.</p>
+                    <a href="?module=evaluate_teacher" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        Evaluate More Teachers
+                    </a>
+                </div>
+            </div>
+        <?php endif; ?>
     <?php endif; ?>
 </div>
 
 <script>
-// Ensure all elements are properly visible and add smooth animations
-document.addEventListener('DOMContentLoaded', function() {
-    // Ensure all elements are visible first
-    const allCards = document.querySelectorAll('.evaluation-card');
-    const allTexts = document.querySelectorAll('.text-visible');
-    const allBackgrounds = document.querySelectorAll('.bg-visible');
-    
-    // Force visibility
-    allCards.forEach(card => {
-        card.style.visibility = 'visible';
-        card.style.display = 'flex';
-        card.style.opacity = '1';
-    });
-    
-    allTexts.forEach(text => {
-        text.style.color = '#374151';
-        text.style.opacity = '1';
-        text.style.visibility = 'visible';
-    });
-    
-    allBackgrounds.forEach(bg => {
-        bg.style.backgroundColor = 'white';
-        bg.style.opacity = '1';
-    });
-    
-    // Add fade in animation after ensuring visibility
-    setTimeout(() => {
-        allCards.forEach((card, index) => {
-            card.style.opacity = '0';
-            card.style.transform = 'translateY(20px)';
-            setTimeout(() => {
-                card.style.transition = 'all 0.5s ease';
-                card.style.opacity = '1';
-                card.style.transform = 'translateY(0)';
-            }, index * 50);
+    // Ensure all elements are properly visible and add smooth animations
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ensure all elements are visible first
+        const allCards = document.querySelectorAll('.evaluation-card');
+        const allTexts = document.querySelectorAll('.text-visible');
+        const allBackgrounds = document.querySelectorAll('.bg-visible');
+
+        // Force visibility
+        allCards.forEach(card => {
+            card.style.visibility = 'visible';
+            card.style.display = 'flex';
+            card.style.opacity = '1';
         });
-    }, 100);
-    
-    // Ensure rating stars are properly displayed
-    const stars = document.querySelectorAll('.star');
-    stars.forEach(star => {
-        star.style.display = 'block';
-        star.style.visibility = 'visible';
+
+        allTexts.forEach(text => {
+            text.style.color = '#374151';
+            text.style.opacity = '1';
+            text.style.visibility = 'visible';
+        });
+
+        allBackgrounds.forEach(bg => {
+            bg.style.backgroundColor = 'white';
+            bg.style.opacity = '1';
+        });
+
+        // Add fade in animation after ensuring visibility
+        setTimeout(() => {
+            allCards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    card.style.transition = 'all 0.5s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 50);
+            });
+        }, 100);
+
+        // Ensure rating stars are properly displayed
+        const stars = document.querySelectorAll('.star');
+        stars.forEach(star => {
+            star.style.display = 'block';
+            star.style.visibility = 'visible';
+        });
     });
-});
 </script>
