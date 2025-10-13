@@ -1,87 +1,170 @@
 <div class="p-2">
     <div class="overflow-x-auto">
         <?php
-        require_once('../config/database.php');
+        require_once __DIR__ . '/../../config/database.php';
 
-        // Get evaluations received by this teacher (simplified query)
-        $evaluations_query = "
-            SELECT 
-                pe.evaluation_date,
-                pe.average_rating,
-                u.firstname as evaluator_firstname,
-                u.lastname as evaluator_lastname
-            FROM peer_evaluations pe
-            JOIN users u ON pe.evaluator_id = u.id
-            WHERE pe.teacher_id = ?
-            ORDER BY pe.evaluation_date DESC
-        ";
+        // School year selection: use ?school_year_id= on the URL or fall back to active school year
+        $requestedSY = isset($_GET['school_year_id']) && $_GET['school_year_id'] !== '' ? (int)$_GET['school_year_id'] : null;
+        $currentSchoolYear = null;
+        $schoolYearLabel = 'All Time';
 
-        $stmt = $conn->prepare($evaluations_query);
-        $stmt->bind_param('i', $_SESSION['userID']);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $evaluations = [];
-        while ($row = $result->fetch_assoc()) {
-            $evaluations[] = $row;
+        if ($requestedSY) {
+            // Validate it exists
+            $sStmt = $conn->prepare("SELECT id, year, semester FROM school_years WHERE id = ? LIMIT 1");
+            $sStmt->bind_param('i', $requestedSY);
+            $sStmt->execute();
+            $sRes = $sStmt->get_result();
+            if ($sRes && $row = $sRes->fetch_assoc()) {
+                $currentSchoolYear = (int)$row['id'];
+                $schoolYearLabel = $row['year'] . ' ' . ($row['semester'] ?? '');
+            }
+        } else {
+            $syRes = $conn->query("SELECT id, year, semester FROM school_years WHERE is_active = 1 LIMIT 1");
+            if ($syRes && $row = $syRes->fetch_assoc()) {
+                $currentSchoolYear = (int)$row['id'];
+                $schoolYearLabel = $row['year'] . ' ' . ($row['semester'] ?? '');
+            }
         }
+
+        // Load all school years for selector
+        $syList = [];
+        $allSyRes = $conn->query("SELECT id, year, semester FROM school_years ORDER BY year DESC, id DESC");
+        if ($allSyRes) {
+            while ($r = $allSyRes->fetch_assoc()) $syList[] = $r;
+        }
+
+        $teacherId = isset($_SESSION['userID']) ? (int)$_SESSION['userID'] : 0;
+
+        // Overall summary: total respondents (distinct students) and overall average
+        $summarySql = "SELECT COUNT(DISTINCT e.evaluator_id) AS respondents, ROUND(AVG(CAST(e.answer AS DECIMAL)),2) AS overall_avg FROM evaluations e WHERE e.teacher_id = ? AND e.evaluator_type = 'student'";
+        if ($currentSchoolYear) {
+            $summarySql .= " AND e.school_year_id = ?";
+            $summaryStmt = $conn->prepare($summarySql);
+            $summaryStmt->bind_param('ii', $teacherId, $currentSchoolYear);
+        } else {
+            $summaryStmt = $conn->prepare($summarySql);
+            $summaryStmt->bind_param('i', $teacherId);
+        }
+        $summaryStmt->execute();
+        $summaryRes = $summaryStmt->get_result();
+        $summary = $summaryRes->fetch_assoc();
+        $respondents = $summary['respondents'] ?? 0;
+        $overall_avg = $summary['overall_avg'] ?? 0;
+
+        // Per-question averages (questionnaire entries)
+        // Only include questions that exist in `questionnaires`. This hides any
+        // evaluations that reference missing questionnaire IDs.
+        $questionsQryStr = "
+SELECT 
+  q.id AS qid,
+  q.question_text AS question_text,
+  ROUND(AVG(e.answer),2) AS avg_rating,
+  COUNT(DISTINCT e.evaluator_id) AS respondents,
+  COUNT(e.id) AS total_answers
+FROM evaluations e
+JOIN questionnaires q ON e.questionnaire_id = q.id
+WHERE e.teacher_id = ? AND e.evaluator_type = 'student'";
+        if ($currentSchoolYear) $questionsQryStr .= " AND e.school_year_id = ?";
+        $questionsQryStr .= " GROUP BY q.id ORDER BY q.id";
+
+        $questionsStmt = $conn->prepare($questionsQryStr);
+        if ($currentSchoolYear) {
+            $questionsStmt->bind_param('ii', $teacherId, $currentSchoolYear);
+        } else {
+            $questionsStmt->bind_param('i', $teacherId);
+        }
+        $questionsStmt->execute();
+        $qRes = $questionsStmt->get_result();
+        $questions = [];
+        while ($r = $qRes->fetch_assoc()) $questions[] = $r;
         ?>
 
         <!-- Header -->
-        <div class="bg-white rounded-lg shadow-sm p-4 mb-4">
-            <h1 class="text-xl font-bold text-gray-800 mb-1">📊 My Evaluations</h1>
-            <p class="text-sm text-gray-600">View feedback from your peers</p>
+        <div class="bg-white rounded-lg shadow-sm p-4 mb-4 flex items-center justify-between">
+            <div>
+                <h1 class="text-xl font-bold text-gray-800 mb-1">📊 My Evaluations</h1>
+                <p class="text-sm text-gray-600">Student-submitted evaluation summary</p>
+            </div>
+            <div></div>
         </div>
 
-        <?php if (empty($evaluations)): ?>
-            <!-- No evaluations -->
-            <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-                <div class="text-gray-400 mb-3">
-                    <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                    </svg>
-                </div>
-                <h3 class="font-semibold text-gray-900 mb-1">No Evaluations Yet</h3>
-                <p class="text-sm text-gray-600">You haven't received any peer evaluations yet.</p>
-            </div>
-        <?php else: ?>
-            <!-- Evaluations List -->
-            <div class="space-y-3">
-                <?php foreach ($evaluations as $evaluation): ?>
-                    <div class="bg-white rounded-lg shadow-sm border p-4">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">
-                                    <?php echo strtoupper(substr($evaluation['evaluator_firstname'], 0, 1) . substr($evaluation['evaluator_lastname'], 0, 1)); ?>
-                                </div>
-                                <div>
-                                    <h3 class="font-semibold text-gray-900">
-                                        <?php echo htmlspecialchars($evaluation['evaluator_firstname'] . ' ' . $evaluation['evaluator_lastname']); ?>
-                                    </h3>
-                                    <p class="text-sm text-gray-500">
-                                        <?php echo date('M j, Y', strtotime($evaluation['evaluation_date'])); ?>
-                                    </p>
-                                </div>
-                            </div>
 
-                            <div class="text-right">
-                                <div class="text-2xl font-bold <?php
-                                                                $rating = round($evaluation['average_rating'], 1);
-                                                                echo $rating >= 4.0 ? 'text-green-600' : ($rating >= 3.0 ? 'text-blue-600' : ($rating >= 2.0 ? 'text-yellow-600' : 'text-red-600'));
-                                                                ?>"><?php echo number_format($evaluation['average_rating'], 1); ?></div>
-                                <div class="text-xs text-gray-500">out of 5.0</div>
-                            </div>
-                        </div>
 
-                        <!-- Rating bar -->
-                        <div class="mt-3">
-                            <div class="bg-gray-200 rounded-full h-2">
-                                <div class="bg-green-500 h-2 rounded-full transition-all duration-300"
-                                    style="width: <?php echo ($evaluation['average_rating'] / 5) * 100; ?>%"></div>
-                            </div>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
+        <!-- Per-school-year results table -->
+        <?php
+        // Compute metrics per school year for this teacher (student evaluators)
+        $perYearStmt = $conn->prepare("SELECT COUNT(DISTINCT e.evaluator_id) AS respondents, ROUND(AVG(e.answer),2) AS overall_avg FROM evaluations e WHERE e.teacher_id = ? AND e.evaluator_type = 'student' AND e.school_year_id = ?");
+        ?>
+
+        <div class="bg-white rounded-lg shadow-sm p-4 mb-4 max-h-[760px] overflow-y-auto">
+            <h2 class="text-lg font-semibold mb-3">Evaluation Results</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">School Year</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Semester</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Respondents</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Overall Average</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-100">
+                        <!-- All Time row -->
+                        <tr>
+                            <td class="px-4 py-3">All Time</td>
+                            <td class="px-4 py-3"></td>
+                            <td class="px-4 py-3"><?php echo (int)$respondents; ?></td>
+                            <td class="px-4 py-3"><?php echo number_format((float)$overall_avg, 2); ?> / 5</td>
+                            <td class="px-4 py-3">
+                                <button data-sy="" class="view-pdf inline-flex items-center px-3 py-1 bg-gray-800 text-white rounded text-sm">PDF</button>
+                            </td>
+                        </tr>
+                        <?php foreach ($syList as $syRow):
+                            // fetch metrics for this school year
+                            $syId = (int)$syRow['id'];
+                            $perYearStmt->bind_param('ii', $teacherId, $syId);
+                            $perYearStmt->execute();
+                            $perYearRes = $perYearStmt->get_result();
+                            $perMetrics = $perYearRes->fetch_assoc();
+                            $pRespondents = $perMetrics['respondents'] ?? 0;
+                            $pAvg = $perMetrics['overall_avg'] ?? 0;
+                        ?>
+                            <tr>
+                                <td class="px-4 py-3"><?php echo htmlspecialchars($syRow['year']); ?></td>
+                                <td class="px-4 py-3"><?php
+                                                        $sem = $syRow['semester'] ?? '';
+                                                        if ($sem === '1' || $sem === 1) echo 'First Semester';
+                                                        else if ($sem === '2' || $sem === 2) echo 'Second Semester';
+                                                        else echo htmlspecialchars($sem);
+                                                        ?></td>
+                                <td class="px-4 py-3"><?php echo (int)$pRespondents; ?></td>
+                                <td class="px-4 py-3"><?php echo number_format((float)$pAvg, 2); ?> / 5</td>
+                                <td class="px-4 py-3">
+                                    <button data-sy="<?php echo $syId; ?>" class="view-pdf inline-flex items-center px-3 py-1 bg-gray-800 text-white rounded text-sm">PDF</button>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             </div>
-        <?php endif; ?>
+        </div>
+
+        <!-- Per-question breakdown -->
+        <!-- Evaluation Details table removed. PDF buttons remain. -->
+        <script>
+            // Delegate handlers for per-row PDF buttons in the table
+            document.addEventListener('click', function(e) {
+                var pdfBtn = e.target.closest('.view-pdf');
+                if (pdfBtn) {
+                    var sy2 = pdfBtn.getAttribute('data-sy');
+                    // Build absolute URL using the project folder to avoid resolving to server root /src
+                    var url2 = window.location.origin + '/faculty_evaluation/src/actions/GenerateTeacherReportPdf.php';
+                    if (sy2) url2 += '?school_year_id=' + encodeURIComponent(sy2);
+                    window.open(url2, '_blank');
+                    return;
+                }
+            });
+        </script>
     </div>
 </div>

@@ -32,7 +32,7 @@ $selected_enrollment_id = $_GET['enrollment_id'] ?? null;
 $selected_enrollment = null;
 
 // Get student info
-$studentRes = $conn->prepare("SELECT firstname, lastname, course FROM users WHERE id = ? AND user_type = 'student' LIMIT 1");
+$studentRes = $conn->prepare("SELECT firstname, lastname, strand FROM users WHERE id = ? AND user_type = 'student' LIMIT 1");
 $studentRes->bind_param('i', $student_id);
 $studentRes->execute();
 $studentRes->store_result();
@@ -40,7 +40,7 @@ if ($studentRes->num_rows === 0) {
     echo '<div class="p-8 text-center text-red-600">Student not found.</div>';
     exit;
 }
-$studentRes->bind_result($firstname, $lastname, $course);
+$studentRes->bind_result($firstname, $lastname, $strand);
 $studentRes->fetch();
 $studentRes->close();
 
@@ -187,7 +187,7 @@ if ($selected_enrollment) {
                         </div>
                         <div>
                             <h3 class="font-semibold text-gray-900 text-base md:text-base"><?php echo htmlspecialchars($firstname . ' ' . $lastname); ?></h3>
-                            <p class="text-sm md:text-sm text-gray-600">Course: <?php echo htmlspecialchars($course); ?></p>
+                            <p class="text-sm md:text-sm text-gray-600">Course: <?php echo htmlspecialchars($strand); ?></p>
                         </div>
                     </div>
                     <div class="bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded">
@@ -374,7 +374,7 @@ if ($selected_enrollment) {
                                 </div>
                                 <div>
                                     <p class="font-semibold text-gray-900 text-sm md:text-base"><?php echo htmlspecialchars($firstname . ' ' . $lastname); ?></p>
-                                    <p class="text-xs md:text-sm text-gray-600"><?php echo htmlspecialchars($course); ?></p>
+                                    <p class="text-xs md:text-sm text-gray-600"><?php echo htmlspecialchars($strand); ?></p>
                                 </div>
                             </div>
                         </div>

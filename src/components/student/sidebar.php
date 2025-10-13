@@ -8,12 +8,12 @@ $student_strand = 'Unknown Strand';
 $first_initial = 'S';
 
 if ($user_id) {
-    $sql = "SELECT firstname, lastname, id, course FROM users WHERE id = $user_id AND user_type = 'student' LIMIT 1";
+    $sql = "SELECT firstname, lastname, id, strand FROM users WHERE id = $user_id AND user_type = 'student' LIMIT 1";
     $result = $conn->query($sql);
     if ($row = $result->fetch_assoc()) {
         $user_name = $row['firstname'] . ' ' . $row['lastname'];
         $student_id = $row['id'];
-        $student_strand = $row['course']; // This will be the strand (STEM, ABM, HUMSS, GAS, ICT)
+        $student_strand = $row['strand']; // This will be the strand (STEM, ABM, HUMSS, GAS, ICT)
         $first_initial = strtoupper(substr($row['firstname'], 0, 1));
     }
 }
