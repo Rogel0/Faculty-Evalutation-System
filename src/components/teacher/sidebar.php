@@ -65,7 +65,7 @@ if ($user_id) {
 
     <!-- Sign Out -->
     <div class="mt-auto p-6 border-t border-slate-700">
-        <a href="/faculty_evaluation/src/auth/logout.php" class="flex items-center justify-center space-x-2 w-full p-3 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors duration-200">
+        <a href="../auth/logout.php" class="flex items-center justify-center space-x-2 w-full p-3 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors duration-200">
             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M3 9a1 1 0 011-1h10a1 1 0 110 2H4a1 1 0 01-1-1zm7 7a1 1 0 01-1-1v-4a1 1 0 112 0v4a1 1 0 01-1 1z" clip-rule="evenodd"></path>
             </svg>
