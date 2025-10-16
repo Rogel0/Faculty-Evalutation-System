@@ -15,7 +15,7 @@
             </div>
 
             <!-- Upload Form -->
-            <form action="/faculty_evaluation/src/actions/BatchStudentUpload.php" method="POST" enctype="multipart/form-data" class="w-full">
+            <form action="../actions/BatchStudentUpload.php" method="POST" enctype="multipart/form-data" class="w-full">
                 <div class="mt-6 w-full">
                     <div class="flex items-center justify-center w-full">
                         <label class="flex flex-col w-full h-32 border-4 border-dashed border-blue-200 hover:bg-gray-50 hover:border-blue-300 rounded-lg cursor-pointer">

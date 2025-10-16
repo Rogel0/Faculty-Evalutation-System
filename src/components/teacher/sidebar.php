@@ -63,6 +63,19 @@ if ($user_id) {
         </a>
     </nav>
 
+    <!-- Settings -->
+    <div class="space-y-1 px-4">
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3">Settings</p>
+        <button type="button" onclick="openChangePasswordModal()" class="group flex items-center space-x-3 p-3 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-all duration-200 w-full">
+            <div class="w-5 h-5 flex items-center justify-center">
+                <svg fill="currentColor" viewBox="0 0 20 20" class="w-5 h-5">
+                    <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path>
+                </svg>
+            </div>
+            <span class="font-medium">Change Password</span>
+        </button>
+    </div>
+
     <!-- Sign Out -->
     <div class="mt-auto p-6 border-t border-slate-700">
         <a href="../auth/logout.php" class="flex items-center justify-center space-x-2 w-full p-3 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors duration-200">

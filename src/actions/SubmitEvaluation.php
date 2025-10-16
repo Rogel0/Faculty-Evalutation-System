@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $checkStmt->bind_param('iii', $student_id, $teacher_id, $subject_id);
     $checkStmt->execute();
     $checkResult = $checkStmt->get_result();
-    
+
     if ($checkResult->num_rows > 0) {
         $existingEvaluation = $checkResult->fetch_assoc();
         $teacherName = $existingEvaluation['firstname'] . ' ' . $existingEvaluation['lastname'];
@@ -43,6 +43,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
     $checkStmt->close();
+
+    // Verify that a student evaluation period is active for the current school year and semester
+    $syRes = $conn->query("SELECT id, semester FROM school_years WHERE is_active = 1 LIMIT 1");
+    $activeSy = $syRes ? $syRes->fetch_assoc() : null;
+    if (!$activeSy) {
+        $_SESSION['error'] = 'No active school year found.';
+        header("Location: " . $_SERVER['HTTP_REFERER']);
+        exit;
+    }
+    $periodChk = $conn->prepare("SELECT id FROM faculty_evaluation_periods WHERE school_year_id = ? AND semester = ? AND evaluation_type = 'student' AND active = 1 LIMIT 1");
+    $periodChk->bind_param('is', $activeSy['id'], $activeSy['semester']);
+    $periodChk->execute();
+    $periodRes = $periodChk->get_result();
+    if (!$periodRes || $periodRes->num_rows === 0) {
+        $_SESSION['error'] = 'Student evaluation period is not active.';
+        header("Location: " . $_SERVER['HTTP_REFERER']);
+        exit;
+    }
+    $periodChk->close();
 
     // Get all questions for validation
     $questionsQuery = "SELECT q.id FROM questionnaires q 
@@ -74,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!empty($missingAnswers)) {
         $_SESSION['error'] = 'Please answer all questions before submitting.';
-         header("Location: " . $_SERVER['HTTP_REFERER']);
+        header("Location: " . $_SERVER['HTTP_REFERER']);
         exit;
     }
 
@@ -114,11 +133,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Commit transaction
         $conn->commit();
-        
-        $_SESSION['success'] = 'Evaluation submitted successfully!';
-         header("Location: " . $_SERVER['HTTP_REFERER']);
-        exit;
 
+        $_SESSION['success'] = 'Evaluation submitted successfully!';
+        header("Location: " . $_SERVER['HTTP_REFERER']);
+        exit;
     } catch (Exception $e) {
         // Rollback transaction onHey. Hi.  error
         $conn->rollback();
@@ -131,4 +149,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header("Location: " . $_SERVER['HTTP_REFERER']);
     exit;
 }
-?>

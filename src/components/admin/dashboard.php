@@ -196,7 +196,7 @@ try {
             JOIN users u ON e.teacher_id = u.id
             WHERE e.evaluator_type = 'student' AND e.answer REGEXP '^[0-5]$' AND e.school_year_id = $school_year_id
             GROUP BY e.teacher_id, u.firstname, u.lastname
-            HAVING evaluation_count >= 1
+            HAVING evaluation_count >= 1 AND AVG(CAST(e.answer AS DECIMAL)) >= 3.5
             ORDER BY avg_rating DESC
             LIMIT 3
         ";
@@ -209,7 +209,7 @@ try {
             JOIN users u ON e.teacher_id = u.id
             WHERE e.evaluator_type = 'student' AND e.answer REGEXP '^[0-5]$'
             GROUP BY e.teacher_id, u.firstname, u.lastname
-            HAVING evaluation_count >= 1
+            HAVING evaluation_count >= 1 AND AVG(CAST(e.answer AS DECIMAL)) >= 3.5
             ORDER BY avg_rating DESC
             LIMIT 3
         ";
@@ -305,9 +305,9 @@ try {
             JOIN users u ON e.teacher_id = u.id
             WHERE e.evaluator_type = 'teacher' AND e.answer REGEXP '^[0-5]$' AND e.school_year_id = $school_year_id
             GROUP BY e.teacher_id, u.firstname, u.lastname
-            HAVING evaluation_count >= 1
+            HAVING evaluation_count >= 1 AND AVG(CAST(e.answer AS DECIMAL)) >= 3.5
             ORDER BY avg_rating DESC
-            LIMIT 10
+            LIMIT 3
         ";
     } else {
         $peer_teacher_query = "
@@ -318,9 +318,9 @@ try {
             JOIN users u ON e.teacher_id = u.id
             WHERE e.evaluator_type = 'teacher' AND e.answer REGEXP '^[0-5]$'
             GROUP BY e.teacher_id, u.firstname, u.lastname
-            HAVING evaluation_count >= 1
+            HAVING evaluation_count >= 1 AND AVG(CAST(e.answer AS DECIMAL)) >= 3.5
             ORDER BY avg_rating DESC
-            LIMIT 10
+            LIMIT 3
         ";
     }
 
@@ -758,139 +758,53 @@ try {
         </div>
 
         <!-- Monthly Evaluation Trends -->
-        <div class="bg-white rounded-lg shadow-lg p-6">
-            <h3 class="text-xl font-semibold text-gray-900 mb-4">Monthly Evaluation Trends</h3>
-            <div class="relative h-96">
-                <canvas id="monthlyChart"></canvas>
-            </div>
-        </div>
+
     </div>
 
     <!-- Top Teachers Table -->
     <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
         <h3 class="text-xl font-semibold text-gray-900 mb-4">Top Performing Teachers</h3>
         <div class="overflow-x-auto">
-            <table class="w-full table-auto">
-                <thead>
-                    <tr class="bg-gray-50">
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Average Rating</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Evaluations</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    <?php foreach ($top_teachers as $index => $teacher): ?>
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <div class="flex-shrink-0 h-10 w-10">
-                                        <div class="h-10 w-10 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold">
-                                            <?php echo strtoupper(substr($teacher['teacher_name'], 0, 2)); ?>
-                                        </div>
-                                    </div>
-                                    <div class="ml-4">
-                                        <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($teacher['teacher_name']); ?></div>
-                                        <div class="text-sm text-gray-500">Rank #<?php echo $index + 1; ?></div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900 font-semibold"><?php echo $teacher['avg_rating']; ?>/5.0</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900"><?php echo number_format($teacher['evaluation_count']); ?></div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <?php
-                                $rating = (float)$teacher['avg_rating'];
-                                $performance_class = '';
-                                $performance_text = '';
-
-                                if ($rating >= 4.5) {
-                                    $performance_class = 'bg-green-100 text-green-800';
-                                    $performance_text = 'Excellent';
-                                } elseif ($rating >= 4.0) {
-                                    $performance_class = 'bg-blue-100 text-blue-800';
-                                    $performance_text = 'Very Good';
-                                } elseif ($rating >= 3.5) {
-                                    $performance_class = 'bg-yellow-100 text-yellow-800';
-                                    $performance_text = 'Good';
-                                } else {
-                                    $performance_class = 'bg-red-100 text-red-800';
-                                    $performance_text = 'Needs Improvement';
-                                }
-                                ?>
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo $performance_class; ?>">
-                                    <?php echo $performance_text; ?>
-                                </span>
-                            </td>
+            <?php if (empty($top_teachers)): ?>
+                <div class="p-6 text-center text-gray-500">No teachers meet the minimum performance threshold (Good or Excellent) for the selected period.</div>
+            <?php else: ?>
+                <table class="w-full table-auto">
+                    <thead>
+                        <tr class="bg-gray-50">
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Average Rating</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Evaluations</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Top Peer Evaluated Teachers Table -->
-    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
-        <h3 class="text-xl font-semibold text-gray-900 mb-4">Top Peer-Evaluated Teachers</h3>
-        <div class="overflow-x-auto">
-            <table class="w-full table-auto">
-                <thead>
-                    <tr class="bg-gray-50">
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peer Rating</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peer Evaluations</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peer Performance</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    <?php if (empty($top_peer_teachers)): ?>
-                        <tr>
-                            <td colspan="4" class="px-6 py-4 text-center text-gray-500">
-                                No peer evaluation data available for the selected period.
-                            </td>
-                        </tr>
-                    <?php else: ?>
-                        <?php foreach ($top_peer_teachers as $index => $teacher): ?>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <?php foreach ($top_teachers as $index => $teacher): ?>
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 h-10 w-10">
-                                            <div class="h-10 w-10 rounded-full bg-gradient-to-r from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold">
+                                            <div class="h-10 w-10 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold">
                                                 <?php echo strtoupper(substr($teacher['teacher_name'], 0, 2)); ?>
                                             </div>
                                         </div>
                                         <div class="ml-4">
                                             <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($teacher['teacher_name']); ?></div>
-                                            <div class="text-sm text-gray-500">Rank: #<?php echo ($index + 1); ?></div>
+                                            <div class="text-sm text-gray-500">Rank #<?php echo $index + 1; ?></div>
                                         </div>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="flex items-center">
-                                        <div class="text-sm font-medium text-gray-900"><?php echo number_format($teacher['avg_rating'], 2); ?></div>
-                                        <div class="ml-2 flex">
-                                            <?php
-                                            $rating = $teacher['avg_rating'];
-                                            for ($i = 1; $i <= 5; $i++) {
-                                                if ($i <= $rating) {
-                                                    echo '<svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>';
-                                                } else {
-                                                    echo '<svg class="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>';
-                                                }
-                                            }
-                                            ?>
-                                        </div>
-                                    </div>
+                                    <div class="text-sm text-gray-900 font-semibold"><?php echo $teacher['avg_rating']; ?>/5.0</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm text-gray-900"><?php echo number_format($teacher['evaluation_count']); ?></div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <?php
-                                    $rating = $teacher['avg_rating'];
+                                    $rating = (float)$teacher['avg_rating'];
+                                    $performance_class = '';
+                                    $performance_text = '';
+
                                     if ($rating >= 4.5) {
                                         $performance_class = 'bg-green-100 text-green-800';
                                         $performance_text = 'Excellent';
@@ -911,9 +825,98 @@ try {
                                 </td>
                             </tr>
                         <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- Top Peer Evaluated Teachers Table -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-xl font-semibold text-gray-900 mb-4">Top Peer-Evaluated Teachers</h3>
+        <div class="overflow-x-auto">
+            <?php if (empty($top_peer_teachers)): ?>
+                <div class="p-6 text-center text-gray-500">No peer-evaluated teachers meet the minimum performance threshold (Good or higher) for the selected period.</div>
+            <?php else: ?>
+                <table class="w-full table-auto">
+                    <thead>
+                        <tr class="bg-gray-50">
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peer Rating</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peer Evaluations</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peer Performance</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <?php if (empty($top_peer_teachers)): ?>
+                            <tr>
+                                <td colspan="4" class="px-6 py-4 text-center text-gray-500">
+                                    No peer evaluation data available for the selected period.
+                                </td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($top_peer_teachers as $index => $teacher): ?>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="flex-shrink-0 h-10 w-10">
+                                                <div class="h-10 w-10 rounded-full bg-gradient-to-r from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold">
+                                                    <?php echo strtoupper(substr($teacher['teacher_name'], 0, 2)); ?>
+                                                </div>
+                                            </div>
+                                            <div class="ml-4">
+                                                <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($teacher['teacher_name']); ?></div>
+                                                <div class="text-sm text-gray-500">Rank: #<?php echo ($index + 1); ?></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="text-sm font-medium text-gray-900"><?php echo number_format($teacher['avg_rating'], 2); ?></div>
+                                            <div class="ml-2 flex">
+                                                <?php
+                                                $rating = $teacher['avg_rating'];
+                                                for ($i = 1; $i <= 5; $i++) {
+                                                    if ($i <= $rating) {
+                                                        echo '<svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>';
+                                                    } else {
+                                                        echo '<svg class="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>';
+                                                    }
+                                                }
+                                                ?>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900"><?php echo number_format($teacher['evaluation_count']); ?></div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <?php
+                                        $rating = $teacher['avg_rating'];
+                                        if ($rating >= 4.5) {
+                                            $performance_class = 'bg-green-100 text-green-800';
+                                            $performance_text = 'Excellent';
+                                        } elseif ($rating >= 4.0) {
+                                            $performance_class = 'bg-blue-100 text-blue-800';
+                                            $performance_text = 'Very Good';
+                                        } elseif ($rating >= 3.5) {
+                                            $performance_class = 'bg-yellow-100 text-yellow-800';
+                                            $performance_text = 'Good';
+                                        } else {
+                                            $performance_class = 'bg-red-100 text-red-800';
+                                            $performance_text = 'Needs Improvement';
+                                        }
+                                        ?>
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo $performance_class; ?>">
+                                            <?php echo $performance_text; ?>
+                                        </span>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -1068,99 +1071,6 @@ try {
     })();
 
     // Monthly Trends Chart
-    (function() {
-        const monthlyCtx = getCtxIfExists('monthlyChart');
-        if (!monthlyCtx) return;
-
-        const labels = monthlyData.map(item => {
-            if (!item || !item.month) return 'N/A';
-            // Expecting format YYYY-MM
-            try {
-                const date = new Date(item.month + '-01');
-                if (isNaN(date.getTime())) return item.month;
-                return date.toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short'
-                });
-            } catch (e) {
-                return item.month;
-            }
-        });
-
-        const evalCounts = monthlyData.map(item => safeInt(item.evaluation_count, 0));
-        const avgRatings = monthlyData.map(item => safeFloat(item.avg_rating, null));
-
-        new Chart(monthlyCtx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Number of Evaluations',
-                    data: evalCounts,
-                    backgroundColor: chartColors.info + '80',
-                    borderColor: chartColors.info,
-                    borderWidth: 1,
-                    yAxisID: 'y',
-                    borderRadius: 6
-                }, {
-                    label: 'Average Rating',
-                    data: avgRatings,
-                    type: 'line',
-                    borderColor: chartColors.warning,
-                    backgroundColor: chartColors.warning,
-                    borderWidth: 3,
-                    pointBackgroundColor: chartColors.warning,
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2,
-                    pointRadius: 6,
-                    yAxisID: 'y1',
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {
-                    mode: 'index',
-                    intersect: false
-                },
-                scales: {
-                    y: {
-                        type: 'linear',
-                        display: true,
-                        position: 'left',
-                        beginAtZero: true,
-                        grid: {
-                            color: '#F3F4F6'
-                        },
-                        title: {
-                            display: true,
-                            text: 'Number of Evaluations'
-                        }
-                    },
-                    y1: {
-                        type: 'linear',
-                        display: true,
-                        position: 'right',
-                        beginAtZero: true,
-                        max: 5,
-                        grid: {
-                            drawOnChartArea: false
-                        },
-                        title: {
-                            display: true,
-                            text: 'Average Rating'
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    }
-                }
-            }
-        });
-    })();
 
     // Department Peer Ratings Chart
     (function() {

@@ -38,6 +38,16 @@ if ($active_sy) {
     $student_period_active = $periodResult->num_rows > 0;
     $periodRes->close();
 }
+// Check for active peer evaluation period (mirror student behavior)
+$peer_period_active = false;
+if ($active_sy) {
+    $periodRes = $conn->prepare("SELECT id FROM faculty_evaluation_periods WHERE school_year_id = ? AND semester = ? AND evaluation_type = 'peer' AND active = 1 LIMIT 1");
+    $periodRes->bind_param('is', $active_sy['id'], $active_sy['semester']);
+    $periodRes->execute();
+    $periodResult = $periodRes->get_result();
+    $peer_period_active = $periodResult->num_rows > 0;
+    $periodRes->close();
+}
 ?>
 
 <!-- Evaluation Trigger UI -->
@@ -49,9 +59,9 @@ if ($active_sy) {
             <h3 class="text-lg font-semibold mb-4 text-blue-700">Student Evaluation</h3>
             <div class="flex flex-col w-full">
                 <label class="block mb-2 text-sm font-medium text-gray-700">Start Time</label>
-                <input name="start_time" type="datetime-local" class="mb-4 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" required <?php if ($student_period_active) echo 'disabled'; ?> />
+                <input id="student_start" name="start_time" type="datetime-local" class="mb-4 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" required <?php if ($student_period_active) echo 'disabled'; ?> />
                 <label class="block mt-12 mb-2 text-sm font-medium text-gray-700">End Time</label>
-                <input name="end_time" type="datetime-local" class="mb-6 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" required <?php if ($student_period_active) echo 'disabled'; ?> />
+                <input id="student_end" name="end_time" type="datetime-local" class="mb-6 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" required <?php if ($student_period_active) echo 'disabled'; ?> />
                 <input type="hidden" name="evaluation_type" value="student" />
                 <button type="submit"
                     class="px-8 mt-12 py-3 rounded-lg shadow-md transition-all text-lg font-semibold flex items-center gap-2 w-full justify-center
@@ -68,20 +78,80 @@ if ($active_sy) {
         <!-- Peer to Peer Evaluation Card -->
         <form method="POST" action="../actions/StartEvaluation.php" class="flex-2 bg-white rounded-xl shadow-lg p-6 flex flex-col items-center">
             <h3 class="text-lg font-semibold mb-4 text-green-700">Peer to Peer Evaluation</h3>
-            <label class="block mb-2 text-sm font-medium text-gray-700">Start Time</label>
-            <input name="start_time" type="datetime-local" class="mb-4 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 w-full" required />
-            <label class="block mb-2 mt-12 text-sm font-medium text-gray-700">End Time</label>
-            <input name="end_time" type="datetime-local" class="mb-6 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 w-full" required />
-            <input type="hidden" name="evaluation_type" value="peer" />
-            <button type="submit" class="px-8 py-3 mt-12 bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700 transition-all text-lg font-semibold flex items-center gap-2 w-full justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"></button>
-            <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-4-4h-1" /></svg>
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 20H4v-2a4 4 0 014-4h1" />
-            <circle cx="9" cy="7" r="4" />
-            <circle cx="17" cy="7" r="4" />
-            </svg>
-            Start Peer Evaluation
-            </button>
+            <div class="flex flex-col w-full">
+                <label class="block mb-2 text-sm font-medium text-gray-700">Start Time</label>
+                <input id="peer_start" name="start_time" type="datetime-local" class="mb-4 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 w-full" required <?php if ($peer_period_active) echo 'disabled'; ?> />
+                <label class="block mb-2 mt-12 text-sm font-medium text-gray-700">End Time</label>
+                <input id="peer_end" name="end_time" type="datetime-local" class="mb-6 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 w-full" required <?php if ($peer_period_active) echo 'disabled'; ?> />
+                <input type="hidden" name="evaluation_type" value="peer" />
+                <button type="submit"
+                    class="px-8 mt-12 py-3 rounded-lg shadow-md transition-all text-lg font-semibold flex items-center gap-2 w-full justify-center
+                    <?php echo $peer_period_active ? 'bg-gray-400 text-gray-200 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'; ?>"
+                    <?php if ($peer_period_active) echo 'disabled'; ?>>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-4-4h-1" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 20H4v-2a4 4 0 014-4h1" />
+                        <circle cx="9" cy="7" r="4" />
+                        <circle cx="17" cy="7" r="4" />
+                    </svg>
+                    <?php echo $peer_period_active ? 'Ongoing Evaluation' : 'Start Peer Evaluation'; ?>
+                </button>
+            </div>
         </form>
     </div>
 </div>
+<script>
+    // Set min for datetime-local inputs to now (rounded to minutes) and ensure start date is today
+    document.addEventListener('DOMContentLoaded', function() {
+        function toLocalInput(dt) {
+            // Format to yyyy-mm-ddThh:MM (no seconds) for datetime-local
+            const pad = n => String(n).padStart(2, '0');
+            return dt.getFullYear() + '-' + pad(dt.getMonth() + 1) + '-' + pad(dt.getDate()) + 'T' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+        }
+        const now = new Date();
+        now.setSeconds(0, 0);
+        const min = toLocalInput(now);
+        ['student_start', 'student_end', 'peer_start', 'peer_end'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.min = min;
+        });
+
+        // Enforce start date calendar === today for student and peer forms
+        ['student_start', 'peer_start'].forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('change', function() {
+                const val = el.value; // e.g. 2025-10-15T14:30
+                if (!val) return;
+                const datePart = val.split('T')[0];
+                const today = new Date();
+                const pad = n => String(n).padStart(2, '0');
+                const todayStr = today.getFullYear() + '-' + pad(today.getMonth() + 1) + '-' + pad(today.getDate());
+                if (datePart !== todayStr) {
+                    alert('Start date must be today.');
+                    el.value = '';
+                }
+            });
+        });
+
+        // Ensure end > start on client-side for better UX
+        function attachEndCheck(startId, endId) {
+            const s = document.getElementById(startId);
+            const e = document.getElementById(endId);
+            if (!s || !e) return;
+            s.addEventListener('change', () => {
+                if (!s.value) return;
+                e.min = s.value;
+            });
+            e.addEventListener('change', () => {
+                if (!s.value || !e.value) return;
+                if (e.value <= s.value) {
+                    alert('End time must be after start time.');
+                    e.value = '';
+                }
+            });
+        }
+        attachEndCheck('student_start', 'student_end');
+        attachEndCheck('peer_start', 'peer_end');
+    });
+</script>

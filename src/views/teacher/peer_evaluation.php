@@ -16,6 +16,24 @@ include('../config/database.php');
         $selected_colleague_id = $_GET['colleague_id'] ?? null;
         $selected_colleague = null;
 
+        // Ensure a peer evaluation period is active for the current active school year
+        $active_sy_res = $conn->query("SELECT id, semester FROM school_years WHERE is_active = 1 LIMIT 1");
+        $active_sy = $active_sy_res ? $active_sy_res->fetch_assoc() : null;
+        $peer_period_active = false;
+        if ($active_sy) {
+            $pstmt = $conn->prepare("SELECT id FROM faculty_evaluation_periods WHERE school_year_id = ? AND semester = ? AND evaluation_type = 'peer' AND active = 1 LIMIT 1");
+            $pstmt->bind_param('is', $active_sy['id'], $active_sy['semester']);
+            $pstmt->execute();
+            $pres = $pstmt->get_result();
+            $peer_period_active = $pres && $pres->num_rows > 0;
+            $pstmt->close();
+        }
+
+        if (!$peer_period_active) {
+            echo '<div class="p-8 text-center text-yellow-600 font-semibold">Peer evaluation period is not active. Please wait for the evaluation to start.</div>';
+            exit;
+        }
+
         // Get teacher info
         $teacherRes = $conn->prepare("SELECT firstname, lastname, department FROM users WHERE id = ? AND user_type = 'teacher' LIMIT 1");
         $teacherRes->bind_param('i', $teacher_id);
