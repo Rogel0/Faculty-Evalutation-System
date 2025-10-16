@@ -2,6 +2,11 @@
 
 include_once('../config/database.php');
 
+// Ensure session is started for flash messages
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $evaluation_type = $_POST['evaluation_type'] ?? '';
     $start_time = $_POST['start_time'] ?? '';
@@ -10,6 +15,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Validate input
     if (!$evaluation_type || !$start_time || !$end_time) {
         $_SESSION['eval_message'] = ['type' => 'error', 'text' => 'Missing required fields.'];
+        header("Location: " . $_SERVER['HTTP_REFERER']);
+        exit;
+    }
+
+    // Parse and validate datetimes
+    try {
+        $now = new DateTime('now');
+        $startDt = new DateTime($start_time);
+        $endDt = new DateTime($end_time);
+    } catch (Exception $e) {
+        $_SESSION['eval_message'] = ['type' => 'error', 'text' => 'Invalid date/time format.'];
+        header("Location: " . $_SERVER['HTTP_REFERER']);
+        exit;
+    }
+
+    // Start time cannot be in the past
+    if ($startDt < $now) {
+        $_SESSION['eval_message'] = ['type' => 'error', 'text' => 'Start time cannot be in the past.'];
+        header("Location: " . $_SERVER['HTTP_REFERER']);
+        exit;
+    }
+
+    // Require the start date to match today's date (calendar date)
+    if ($startDt->format('Y-m-d') !== $now->format('Y-m-d')) {
+        $_SESSION['eval_message'] = ['type' => 'error', 'text' => 'Start date must be today.'];
+        header("Location: " . $_SERVER['HTTP_REFERER']);
+        exit;
+    }
+
+    // End must be after start
+    if ($endDt <= $startDt) {
+        $_SESSION['eval_message'] = ['type' => 'error', 'text' => 'End time must be after start time.'];
         header("Location: " . $_SERVER['HTTP_REFERER']);
         exit;
     }

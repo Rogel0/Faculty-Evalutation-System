@@ -1,5 +1,28 @@
 <?php
 include('../config/database.php');
+// Session flash toasts (shows messages set by actions like AddStudent.php)
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+// Helper to render a toast for a given message and type
+if (isset($_SESSION['success']) || isset($_SESSION['error']) || isset($_SESSION['warning'])) {
+    $type = isset($_SESSION['success']) ? 'success' : (isset($_SESSION['warning']) ? 'warning' : 'error');
+    $msg = isset($_SESSION['success']) ? $_SESSION['success'] : (isset($_SESSION['warning']) ? $_SESSION['warning'] : $_SESSION['error']);
+    // Ensure Toastify is available and then show the toast on DOMContentLoaded
+    echo '<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>';
+    echo '<script>window.addEventListener("DOMContentLoaded", function(){
+        Toastify({
+            text: "' . addslashes($msg) . '",
+            duration: 4000,
+            gravity: "top",
+            position: "right",
+            backgroundColor: "' . ($type === 'success' ? '#22c55e' : ($type === 'warning' ? '#f59e0b' : '#ef4444')) . '",
+            close: true
+        }).showToast();
+    });</script>';
+    // clear the session flash keys
+    unset($_SESSION['success'], $_SESSION['error'], $_SESSION['warning']);
+}
 ?>
 
 <div class="p-8">

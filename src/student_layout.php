@@ -56,4 +56,7 @@ if (isset($_SESSION['errorLogin'])) {
     });
 </script>
 
+<?php // Include change password modal for students
+include __DIR__ . '/components/shared/change_password_modal.php'; ?>
+
 </html>

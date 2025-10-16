@@ -41,6 +41,8 @@ if (isset($_SESSION['errorLogin'])) {
 <script src="https://cdn.jsdelivr.net/npm/toastify-js@1.12.0/src/toastify.min.js"></script>
 <script src="/faculty_evaluation/src/scripts/toast.js"></script>
 
+<?php include __DIR__ . '/components/shared/change_password_modal.php'; ?>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         <?php if (isset($_SESSION['error'])): ?>

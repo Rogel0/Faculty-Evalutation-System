@@ -158,8 +158,9 @@ WHERE e.teacher_id = ? AND e.evaluator_type = 'student'";
                 var pdfBtn = e.target.closest('.view-pdf');
                 if (pdfBtn) {
                     var sy2 = pdfBtn.getAttribute('data-sy');
-                    // Build absolute URL using the project folder to avoid resolving to server root /src
-                    var url2 = window.location.origin + '/faculty_evaluation/src/actions/GenerateTeacherReportPdf.php';
+                    // Build absolute URL for the PDF action resolving the relative path correctly
+                    // Use the URL constructor to resolve the relative path against the current page URL
+                    var url2 = new URL('../actions/GenerateTeacherReportPdf.php', window.location.href).href;
                     if (sy2) url2 += '?school_year_id=' + encodeURIComponent(sy2);
                     window.open(url2, '_blank');
                     return;

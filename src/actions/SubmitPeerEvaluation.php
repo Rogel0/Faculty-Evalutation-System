@@ -37,6 +37,17 @@ if ($schoolYearResult && $schoolYearResult->num_rows > 0) {
 }
 $school_year_id = $_POST['school_year_id'] ?? $current_school_year;
 
+// Verify that a peer evaluation period is currently active
+$periodCheck = $conn->prepare("SELECT id FROM faculty_evaluation_periods WHERE school_year_id = ? AND evaluation_type = 'peer' AND active = 1 LIMIT 1");
+$periodCheck->bind_param('i', $school_year_id);
+$periodCheck->execute();
+$periodRes = $periodCheck->get_result();
+if (!$periodRes || $periodRes->num_rows === 0) {
+    echo json_encode(['success' => false, 'message' => 'Peer evaluation period is not active']);
+    exit;
+}
+$periodCheck->close();
+
 // Get a dummy subject ID for peer evaluations (use the first available subject)
 $dummy_subject_id = 1; // Default fallback
 $subjectQuery = "SELECT id FROM subjects ORDER BY id ASC LIMIT 1";
@@ -95,12 +106,14 @@ if ($existing->num_rows > 0) {
     exit;
 }
 
-// Get all teacher questionnaire IDs
-$questionnaire_query = "SELECT id FROM questionnaires WHERE evaluator_type = 'teacher' ORDER BY id";
+// Get all teacher questionnaire IDs by joining to criteria (safer if questionnaires rows don't have evaluator_type)
+$questionnaire_query = "SELECT q.id FROM questionnaires q LEFT JOIN criteria c ON q.criteria_id = c.id WHERE c.evaluator_type = 'teacher' ORDER BY q.id";
 $questionnaire_result = $conn->query($questionnaire_query);
 $questionnaire_ids = [];
-while ($row = $questionnaire_result->fetch_assoc()) {
-    $questionnaire_ids[] = $row['id'];
+if ($questionnaire_result) {
+    while ($row = $questionnaire_result->fetch_assoc()) {
+        $questionnaire_ids[] = $row['id'];
+    }
 }
 
 if (empty($questionnaire_ids)) {
