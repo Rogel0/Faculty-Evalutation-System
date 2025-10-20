@@ -19,7 +19,7 @@ $questionsData = [];
 $questionsQuery = "SELECT q.id, q.question_text, q.criteria_id, c.name 
                    FROM questionnaires q 
                    LEFT JOIN criteria c ON q.criteria_id = c.id 
-                   WHERE c.evaluator_type = 'teacher' 
+                   WHERE c.evaluator_type = 'teacher' AND COALESCE(q.deleted,0) = 0
                    ORDER BY c.name, q.id";
 $questionsResult = $conn->query($questionsQuery);
 if ($questionsResult) {
