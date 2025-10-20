@@ -18,14 +18,26 @@
             $records_per_page = 10;
             $offset = ($page - 1) * $records_per_page;
 
-            // Get total records for pagination
-            $total_query = "SELECT COUNT(*) as count FROM users WHERE user_type = 'student'";
+            // Get optional search query
+            $search_q = isset($_GET['q']) ? trim($_GET['q']) : '';
+            $search_esc = $conn->real_escape_string($search_q);
+
+            // Get total records for pagination (with optional search)
+            if ($search_q !== '') {
+                $total_query = "SELECT COUNT(*) as count FROM users WHERE user_type = 'student' AND (student_id LIKE '%$search_esc%' OR firstname LIKE '%$search_esc%' OR lastname LIKE '%$search_esc%' OR email LIKE '%$search_esc%')";
+            } else {
+                $total_query = "SELECT COUNT(*) as count FROM users WHERE user_type = 'student'";
+            }
             $total_result = $conn->query($total_query);
             $total_records = $total_result->fetch_assoc()['count'];
             $total_pages = ceil($total_records / $records_per_page);
 
-            // Get records for current page
-            $result = $conn->query("SELECT id, student_id, firstname, lastname, email, grade_level, strand FROM users WHERE user_type = 'student' ORDER BY id DESC LIMIT $offset, $records_per_page");
+            // Get records for current page (with optional search)
+            if ($search_q !== '') {
+                $result = $conn->query("SELECT id, student_id, firstname, lastname, email, grade_level, strand FROM users WHERE user_type = 'student' AND (student_id LIKE '%$search_esc%' OR firstname LIKE '%$search_esc%' OR lastname LIKE '%$search_esc%' OR email LIKE '%$search_esc%') ORDER BY id DESC LIMIT $offset, $records_per_page");
+            } else {
+                $result = $conn->query("SELECT id, student_id, firstname, lastname, email, grade_level, strand FROM users WHERE user_type = 'student' ORDER BY id DESC LIMIT $offset, $records_per_page");
+            }
             if ($result && $result->num_rows > 0):
                 $rowIndex = 0;
                 while ($row = $result->fetch_assoc()): ?>
@@ -99,13 +111,13 @@
                 </div>
                 <div class="flex gap-2">
                     <?php if ($page > 1): ?>
-                        <a href="?module=add_student&page=<?php echo ($page - 1) ?>" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm font-medium">
+                        <a href="?module=add_student&page=<?php echo ($page - 1) ?><?php echo $search_q !== '' ? '&q=' . urlencode($search_q) : '' ?>" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm font-medium">
                             Previous
                         </a>
                     <?php endif; ?>
 
                     <?php if ($page < $total_pages): ?>
-                        <a href="?module=add_student&page=<?php echo ($page + 1) ?>" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm font-medium">
+                        <a href="?module=add_student&page=<?php echo ($page + 1) ?><?php echo $search_q !== '' ? '&q=' . urlencode($search_q) : '' ?>" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm font-medium">
                             Next
                         </a>
                     <?php endif; ?>
