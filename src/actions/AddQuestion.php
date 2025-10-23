@@ -17,8 +17,10 @@ if (isset($_POST['submitQuestionBtn'])) {
 
     if ($conn->query($insertQuestionQuery)) {
         $_SESSION['success'] = 'Question added successfully!';
+        $_SESSION['eval_message'] = ['type' => 'success', 'text' => 'Question added successfully!'];
     } else {
         $_SESSION['error'] = 'Error adding question: ' . $conn->error;
+        $_SESSION['eval_message'] = ['type' => 'error', 'text' => 'Error adding question: ' . $conn->error];
     }
 
     header("Location: " . $_SERVER['HTTP_REFERER']);

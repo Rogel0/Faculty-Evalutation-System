@@ -188,7 +188,8 @@ try {
                     Cancel
                 </button>
                 <button type="submit"
-                    class="px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg font-semibold transition" <?php if ($anyActiveYear) echo 'disabled style="opacity:0.5;cursor:not-allowed"'; ?>>
+                    id="ay_submit"
+                    class="px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg font-semibold transition">
                     <span id="submitBtnText">Save Academic Year</span>
                 </button>
             </div>
@@ -205,11 +206,17 @@ try {
     const modalTitle = document.getElementById('modalTitle');
     const submitBtnText = document.getElementById('submitBtnText');
 
-    // Open modal for adding
+    // Open modal for adding - block when an active year already exists
+    const anyActiveYear = <?php echo $anyActiveYear ? 'true' : 'false'; ?>;
     addBtn.addEventListener('click', function() {
+        if (anyActiveYear) {
+            showToast('An active academic year already exists. Deactivate it before adding a new one.', 'error');
+            return;
+        }
         resetForm();
         modalTitle.textContent = 'Add Academic Year';
         submitBtnText.textContent = 'Save Academic Year';
+        document.getElementById('ay_submit').disabled = false;
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
     });
@@ -243,7 +250,7 @@ try {
             submitBtnText.textContent = 'Update Academic Year';
 
             // Fetch data
-            fetch('../../actions/GetAcademicYear.php?id=' + id)
+            fetch('../actions/GetAcademicYear.php?id=' + id)
                 .then(res => res.json())
                 .then(data => {
                     document.getElementById('ay_id').value = data.id;
@@ -255,25 +262,48 @@ try {
                     document.body.style.overflow = 'hidden';
                 })
                 .catch(err => {
-                    alert('Failed to load academic year data');
+                    showToast('Failed to load academic year data', 'error');
                     console.error(err);
                 });
         });
     });
 
-    // Form validation
+    // Form validation and AJAX submit
     form.addEventListener('submit', function(e) {
         const startDate = new Date(document.getElementById('ay_start_date').value);
         const endDate = new Date(document.getElementById('ay_end_date').value);
 
         if (endDate <= startDate) {
             e.preventDefault();
-            alert('End date must be after start date');
+            showToast('End date must be after start date', 'error');
             return false;
         }
 
-        // Show loading state
-        submitBtnText.textContent = 'Saving...';
+        // If JS is enabled, submit via fetch to show toast immediately and avoid full reload
+        if (window.fetch) {
+            e.preventDefault();
+            submitBtnText.textContent = 'Saving...';
+            const fd = new FormData(form);
+            fetch('../actions/AddAcademicYear.php', {
+                method: 'POST',
+                body: fd,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            }).then(r => r.json()).then(result => {
+                if (result.success) {
+                    showToast(result.message || 'Academic year saved', 'success');
+                    closeModal();
+                    setTimeout(() => location.reload(), 800);
+                } else {
+                    showToast(result.error || 'Failed to save academic year', 'error');
+                    submitBtnText.textContent = 'Save Academic Year';
+                }
+            }).catch(err => {
+                showToast('Request failed: ' + err, 'error');
+                submitBtnText.textContent = 'Save Academic Year';
+            });
+        }
     });
 
     // Close modal on Escape key

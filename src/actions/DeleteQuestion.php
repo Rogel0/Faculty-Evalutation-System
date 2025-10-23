@@ -40,7 +40,7 @@ $stmt->close();
 $evaluator_type = $row['evaluator_type'] ?? 'student';
 
 // Map evaluator_type to faculty_evaluation_periods.evaluation_type
-$period_type = ($evaluator_type === 'teacher') ? 'peer' : 'student';
+$period_type = ($evaluator_type === 'teacher' || $evaluator_type === 'supervisor') ? 'peer' : 'student';
 
 // Prevent deletion when an evaluation period is currently active for this evaluator type
 $periodCheck = $conn->prepare('SELECT id FROM faculty_evaluation_periods WHERE active = 1 AND evaluation_type = ? LIMIT 1');

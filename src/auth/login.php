@@ -37,7 +37,7 @@ if ($user = mysqli_fetch_assoc($result)) {
                 header('Location: ../router/teacher.php?module=peer_evaluation');
                 break;
             case 'supervisor':
-                header('Location: ../router/supervisor.php?module=dashboard');
+                header('Location: ../router/supervisor.php?module=evaluation');
                 break;
             default:
                 $_SESSION['error'] = 'Unknown user type!';

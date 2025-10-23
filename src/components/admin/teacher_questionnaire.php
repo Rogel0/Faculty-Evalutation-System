@@ -39,6 +39,13 @@ if ($periodResult && $periodResult->num_rows > 0) {
 <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 <script src="../../scripts/toast.js"></script>
+<?php
+if (isset($_SESSION['eval_message'])) {
+    $msg = $_SESSION['eval_message'];
+    echo '<script>window.addEventListener("DOMContentLoaded",function(){Toastify({text: "' . addslashes($msg['text']) . '",duration: 4000,gravity: "top",position: "right",backgroundColor: "' . ($msg['type'] === 'success' ? '#22c55e' : '#ef4444') . '",close: true}).showToast();});</script>';
+    unset($_SESSION['eval_message']);
+}
+?>
 
 <div class="w-full h-auto p-4 overflow-y-hidden">
     <!-- Header -->

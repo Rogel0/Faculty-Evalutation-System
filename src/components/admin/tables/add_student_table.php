@@ -13,6 +13,18 @@
         </thead>
         <tbody class="bg-white">
             <?php
+            // Load subjects and teachers for the edit modal
+            $subjects = [];
+            $subjResult = $conn->query("SELECT id, subject_name FROM subjects ORDER BY subject_name");
+            if ($subjResult) {
+                while ($r = $subjResult->fetch_assoc()) $subjects[] = $r;
+            }
+            $teachers = [];
+            $teacherResult = $conn->query("SELECT id, firstname, lastname FROM users WHERE user_type = 'teacher' ORDER BY lastname, firstname");
+            if ($teacherResult) {
+                while ($r = $teacherResult->fetch_assoc()) $teachers[] = $r;
+            }
+
             // Pagination
             $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
             $records_per_page = 10;
@@ -69,7 +81,7 @@
                         </td>
                         <td class="px-4 py-3 whitespace-nowrap text-center border-b border-gray-100">
                             <div class="flex items-center justify-center gap-2">
-                                <a href="#" class="inline-flex items-center px-3 py-1 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 font-semibold text-xs transition">
+                                <a href="#" data-student-id="<?php echo $row['id']; ?>" class="edit-student inline-flex items-center px-3 py-1 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 font-semibold text-xs transition">
                                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 13l6.293-6.293a1 1 0 011.414 0l1.586 1.586a1 1 0 010 1.414L11 17H9v-2z" />
                                     </svg>
@@ -120,3 +132,106 @@
         </div>
     <?php endif; ?>
 </div>
+
+<?php include_once(__DIR__ . '/../modal/edit_student_modal.php'); ?>
+
+<script>
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.edit-student')) {
+            e.preventDefault();
+            const btn = e.target.closest('.edit-student');
+            const id = btn.getAttribute('data-student-id');
+            openEditModal(id);
+        }
+    });
+
+    function openEditModal(id) {
+        const modal = document.getElementById('editStudentModal');
+        modal.classList.remove('hidden');
+        // fetch student data
+        fetch('../actions/GetStudent.php?id=' + encodeURIComponent(id))
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) return showToast(data.error, 'error');
+                document.getElementById('edit_student_id').value = data.id;
+                document.getElementById('edit_student_id_input').value = data.student_id || '';
+                document.getElementById('edit_firstname').value = data.firstname || '';
+                document.getElementById('edit_lastname').value = data.lastname || '';
+                document.getElementById('edit_email').value = data.email || '';
+                document.getElementById('edit_grade_level').value = data.grade_level || '';
+                document.getElementById('edit_strand').value = data.strand || '';
+                // populate pairs
+                const pairsContainer = document.getElementById('editPairs');
+                pairsContainer.innerHTML = '';
+                (data.enrollments || []).forEach(pair => {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center gap-3';
+                    const subjSel = document.createElement('select');
+                    subjSel.name = 'subject_id[]';
+                    subjSel.className = 'flex-1 mt-1 rounded border px-3 py-2';
+                    subjSel.required = true;
+                    <?php foreach ($subjects as $subject): ?> {
+                            const opt = document.createElement('option');
+                            opt.value = '<?php echo $subject['id']; ?>';
+                            opt.text = '<?php echo addslashes($subject['subject_name']); ?>';
+                            subjSel.appendChild(opt);
+                        }
+                    <?php endforeach; ?>
+                    subjSel.value = pair.subject_id;
+
+                    const teachSel = document.createElement('select');
+                    teachSel.name = 'teacher_id[]';
+                    teachSel.className = 'flex-1 mt-1 rounded border px-3 py-2';
+                    teachSel.required = true;
+                    <?php foreach ($teachers as $teacher): ?> {
+                            const opt = document.createElement('option');
+                            opt.value = '<?php echo $teacher['id']; ?>';
+                            opt.text = '<?php echo addslashes($teacher['lastname'] . ', ' . $teacher['firstname']); ?>';
+                            teachSel.appendChild(opt);
+                        }
+                    <?php endforeach; ?>
+                    teachSel.value = pair.teacher_id;
+
+                    const remBtn = document.createElement('button');
+                    remBtn.type = 'button';
+                    remBtn.className = 'px-3 py-1 bg-red-500 text-white rounded';
+                    remBtn.textContent = '×';
+                    remBtn.addEventListener('click', () => div.remove());
+
+                    div.appendChild(subjSel);
+                    div.appendChild(teachSel);
+                    div.appendChild(remBtn);
+                    pairsContainer.appendChild(div);
+                });
+            }).catch(err => {
+                showToast('Failed to load student: ' + err, 'error');
+            });
+    }
+
+    document.getElementById('editStudentModal').addEventListener('click', function(e) {
+        if (e.target == this) this.classList.add('hidden');
+    });
+
+    document.getElementById('editStudentForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const form = e.target;
+        const formData = new FormData(form);
+        fetch('../actions/UpdateStudent.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    // close modal and show toast then reload
+                    document.getElementById('editStudentModal').classList.add('hidden');
+                    showToast('Student updated successfully', 'success');
+                    setTimeout(() => location.reload(), 900);
+                } else {
+                    showToast(data.error || 'Failed to update student', 'error');
+                }
+            }).catch(err => {
+                showToast('Request failed: ' + err, 'error');
+            });
+    });
+</script>

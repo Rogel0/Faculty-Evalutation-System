@@ -17,7 +17,7 @@ $is_active = 0;
 
 if (empty($year) || empty($semester) || empty($start_date) || empty($end_date)) {
     $_SESSION['error'] = 'All fields are required.';
-     header("Location: " . $_SERVER['HTTP_REFERER']);
+    header("Location: " . $_SERVER['HTTP_REFERER']);
     exit;
 }
 
@@ -28,18 +28,28 @@ try {
         $stmt->bind_param('ssssi', $year, $semester, $start_date, $end_date, $id);
         $stmt->execute();
         $stmt->close();
-        $_SESSION['success'] = 'Academic year updated.';
+        $message = 'Academic year updated.';
     } else {
         $stmt = $conn->prepare("INSERT INTO school_years (year, semester, start_date, end_date, is_active, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
         $stmt->bind_param('ssssi', $year, $semester, $start_date, $end_date, $is_active);
         $stmt->execute();
         $stmt->close();
-        $_SESSION['success'] = 'Academic year added.';
+        $message = 'Academic year added.';
     }
 } catch (Exception $e) {
-    $_SESSION['error'] = 'Database error: ' . $e->getMessage();
+    $error = 'Database error: ' . $e->getMessage();
 }
 
- header("Location: " . $_SERVER['HTTP_REFERER']);
+// If this was an AJAX/XHR request, return JSON to allow toast UI. Otherwise fall back to redirect.
+if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+    header('Content-Type: application/json');
+    if (!empty($error)) {
+        echo json_encode(['error' => $error]);
+    } else {
+        echo json_encode(['success' => true, 'message' => $message ?? 'Saved']);
+    }
+    exit;
+}
+
+header("Location: " . $_SERVER['HTTP_REFERER']);
 exit;
-?>

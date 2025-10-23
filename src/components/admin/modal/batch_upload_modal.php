@@ -27,7 +27,7 @@
                                     Select Excel/CSV file
                                 </p>
                             </div>
-                            <input type="file" name="batch_file" id="fileUpload" class="opacity-0" accept=".xlsx,.xls,.csv" required onchange="handleFilePreview(this)" />
+                            <input type="file" name="batch_file" id="fileUpload" class="opacity-0" accept=".xlsx,.xls,.csv" required />
                         </label>
                     </div>
                     <p class="text-xs text-gray-500 mt-2">Accepted formats: .xlsx, .xls, .csv</p>
@@ -64,8 +64,8 @@
                         class="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400">
                         Cancel
                     </button>
-                    <button id="uploadButton" type="submit" name="upload"
-                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button id="uploadButton" type="button" name="upload"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500" disabled>
                         Upload Students
                     </button>
                 </div>

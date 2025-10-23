@@ -48,6 +48,16 @@ if ($active_sy) {
     $peer_period_active = $periodResult->num_rows > 0;
     $periodRes->close();
 }
+// Check for active supervisor evaluation period
+$supervisor_period_active = false;
+if ($active_sy) {
+    $periodRes = $conn->prepare("SELECT id FROM faculty_evaluation_periods WHERE school_year_id = ? AND semester = ? AND evaluation_type = 'supervisor' AND active = 1 LIMIT 1");
+    $periodRes->bind_param('is', $active_sy['id'], $active_sy['semester']);
+    $periodRes->execute();
+    $periodResult = $periodRes->get_result();
+    $supervisor_period_active = $periodResult->num_rows > 0;
+    $periodRes->close();
+}
 ?>
 
 <!-- Evaluation Trigger UI -->
@@ -63,7 +73,7 @@ if ($active_sy) {
                 <label class="block mt-12 mb-2 text-sm font-medium text-gray-700">End Time</label>
                 <input id="student_end" name="end_time" type="datetime-local" class="mb-6 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" required <?php if ($student_period_active) echo 'disabled'; ?> />
                 <input type="hidden" name="evaluation_type" value="student" />
-                <button type="submit"
+                <button type="submit" name="start_btn" value="student"
                     class="px-8 mt-12 py-3 rounded-lg shadow-md transition-all text-lg font-semibold flex items-center gap-2 w-full justify-center
                     <?php echo $student_period_active ? 'bg-gray-400 text-gray-200 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'; ?>"
                     <?php if ($student_period_active) echo 'disabled'; ?>>
@@ -85,6 +95,7 @@ if ($active_sy) {
                 <input id="peer_end" name="end_time" type="datetime-local" class="mb-6 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 w-full" required <?php if ($peer_period_active) echo 'disabled'; ?> />
                 <input type="hidden" name="evaluation_type" value="peer" />
                 <button type="submit"
+                    <button type="submit" name="start_btn" value="peer"
                     class="px-8 mt-12 py-3 rounded-lg shadow-md transition-all text-lg font-semibold flex items-center gap-2 w-full justify-center
                     <?php echo $peer_period_active ? 'bg-gray-400 text-gray-200 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'; ?>"
                     <?php if ($peer_period_active) echo 'disabled'; ?>>
@@ -95,6 +106,28 @@ if ($active_sy) {
                         <circle cx="17" cy="7" r="4" />
                     </svg>
                     <?php echo $peer_period_active ? 'Ongoing Evaluation' : 'Start Peer Evaluation'; ?>
+                </button>
+            </div>
+        </form>
+        <!-- Supervisor Evaluation Card -->
+        <form method="POST" action="../actions/StartEvaluation.php" class="flex-2 bg-white rounded-xl shadow-lg p-6 flex flex-col items-center">
+            <h3 class="text-lg font-semibold mb-4 text-purple-700">Supervisor Evaluation</h3>
+            <div class="flex flex-col w-full">
+                <label class="block mb-2 text-sm font-medium text-gray-700">Start Time</label>
+                <input id="supervisor_start" name="start_time" type="datetime-local" class="mb-4 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 w-full" required <?php if ($supervisor_period_active) echo 'disabled'; ?> />
+                <label class="block mb-2 mt-12 text-sm font-medium text-gray-700">End Time</label>
+                <input id="supervisor_end" name="end_time" type="datetime-local" class="mb-6 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 w-full" required <?php if ($supervisor_period_active) echo 'disabled'; ?> />
+                <input type="hidden" name="evaluation_type" value="supervisor" />
+                <button type="submit"
+                    <button type="submit" name="start_btn" value="supervisor"
+                    class="px-8 mt-12 py-3 rounded-lg shadow-md transition-all text-lg font-semibold flex items-center gap-2 w-full justify-center
+                    <?php echo $supervisor_period_active ? 'bg-gray-400 text-gray-200 cursor-not-allowed' : 'bg-purple-600 text-white hover:bg-purple-700'; ?>"
+                    <?php if ($supervisor_period_active) echo 'disabled'; ?>>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l6.16-3.422A12.083 12.083 0 0112 21.75a12.083 12.083 0 01-6.16-11.172L12 14z" />
+                    </svg>
+                    <?php echo $supervisor_period_active ? 'Ongoing Evaluation' : 'Start Supervisor Evaluation'; ?>
                 </button>
             </div>
         </form>
@@ -111,13 +144,18 @@ if ($active_sy) {
         const now = new Date();
         now.setSeconds(0, 0);
         const min = toLocalInput(now);
-        ['student_start', 'student_end', 'peer_start', 'peer_end'].forEach(id => {
+        ['student_start', 'student_end', 'peer_start', 'peer_end', 'supervisor_start', 'supervisor_end'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.min = min;
         });
 
-        // Enforce start date calendar === today for student and peer forms
-        ['student_start', 'peer_start'].forEach(id => {
+        // Enforce start date calendar === today for student/peer/supervisor forms and show type-specific message
+        const evalLabels = {
+            'student_start': 'Student',
+            'peer_start': 'Peer',
+            'supervisor_start': 'Supervisor'
+        };
+        ['student_start', 'peer_start', 'supervisor_start'].forEach(id => {
             const el = document.getElementById(id);
             if (!el) return;
             el.addEventListener('change', function() {
@@ -128,7 +166,8 @@ if ($active_sy) {
                 const pad = n => String(n).padStart(2, '0');
                 const todayStr = today.getFullYear() + '-' + pad(today.getMonth() + 1) + '-' + pad(today.getDate());
                 if (datePart !== todayStr) {
-                    alert('Start date must be today.');
+                    const label = evalLabels[id] || 'this';
+                    alert(`Start date must be today for ${label} evaluation.`);
                     el.value = '';
                 }
             });
@@ -146,12 +185,14 @@ if ($active_sy) {
             e.addEventListener('change', () => {
                 if (!s.value || !e.value) return;
                 if (e.value <= s.value) {
-                    alert('End time must be after start time.');
+                    const label = evalLabels[startId] || 'this';
+                    alert(`End time must be after start time for ${label} evaluation.`);
                     e.value = '';
                 }
             });
         }
         attachEndCheck('student_start', 'student_end');
         attachEndCheck('peer_start', 'peer_end');
+        attachEndCheck('supervisor_start', 'supervisor_end');
     });
 </script>

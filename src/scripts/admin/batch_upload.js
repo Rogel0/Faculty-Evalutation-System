@@ -32,12 +32,16 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   if (uploadButton) {
-    uploadButton.addEventListener("click", async () => {
+    uploadButton.addEventListener("click", async (e) => {
+      // prevent the surrounding form from performing a normal submit
+      e.preventDefault();
       if (previewData.length === 0) return;
 
       try {
         const formData = new FormData();
         formData.append("batch_file", fileInput.files[0]);
+        // mark as AJAX so server returns JSON instead of redirect
+        formData.append("ajax", "true");
 
         const response = await fetch(
           "/faculty_evaluation/src/actions/BatchStudentUpload.php",
@@ -47,9 +51,20 @@ document.addEventListener("DOMContentLoaded", function () {
           }
         );
 
-        const result = await response.json();
+        // Try to parse JSON; if server returned HTML (e.g., PHP error page), show it
+        let resultText = await response.text();
+        let result = null;
+        try {
+          result = JSON.parse(resultText);
+        } catch (err) {
+          console.error("Upload response is not JSON:", resultText);
+          // show the raw server response trimmed to a reasonable length
+          const snippet = resultText.replace(/\s+/g, " ").trim().slice(0, 1000);
+          showToast("Server error during upload: " + snippet, "error");
+          return;
+        }
 
-        if (result.success) {
+        if (result && result.success) {
           modal.classList.add("hidden");
           if (result.warnings && result.warnings.length > 0) {
             const msgs = result.warnings
@@ -60,7 +75,6 @@ document.addEventListener("DOMContentLoaded", function () {
             showToast("Students uploaded successfully", "success");
           }
         } else {
-          // display server-provided error via toast (avoid alert/raw JSON)
           const msg = result && result.error ? result.error : "Upload failed";
           showToast(msg, "error");
         }
@@ -174,24 +188,5 @@ document.addEventListener("DOMContentLoaded", function () {
     previewTableBody.innerHTML = tableContent;
   }
 
-  function showToast(toastElement, message) {
-    if (!toastElement) {
-      // Fallback: simple alert if toast element not present
-      alert(message);
-      return;
-    }
-
-    const msgEl = toastElement.querySelector(".message");
-    if (msgEl) {
-      msgEl.textContent = message;
-    } else {
-      // ensure we don't clobber structure -- append or set text
-      if (toastElement.firstChild)
-        toastElement.firstChild.textContent = message;
-      else toastElement.textContent = message;
-    }
-
-    toastElement.classList.remove("hidden");
-    setTimeout(() => toastElement.classList.add("hidden"), 3000);
-  }
+  // Use the global showToast(message, type) defined in /src/scripts/toast.js
 });

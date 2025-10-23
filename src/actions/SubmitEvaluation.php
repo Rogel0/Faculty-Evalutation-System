@@ -91,6 +91,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // Validate comment
+    $comment = trim($_POST['comment'] ?? '');
+    if ($comment === '') {
+        $_SESSION['error'] = 'Please provide a comment in the comment box.';
+        header("Location: " . $_SERVER['HTTP_REFERER']);
+        exit;
+    }
+
     if (!empty($missingAnswers)) {
         $_SESSION['error'] = 'Please answer all questions before submitting.';
         header("Location: " . $_SERVER['HTTP_REFERER']);
@@ -116,13 +124,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $rating = $_POST["q_$questionId"];
                 if ($rating >= 1 && $rating <= 5) {
                     // Insert each answer as a separate evaluation record
-                    $answerQuery = "INSERT INTO evaluations (evaluator_id, evaluator_type, teacher_id, subject_id, questionnaire_id, answer, school_year_id, created_at) 
-                                   VALUES (?, 'student', ?, ?, ?, ?, ?, NOW())";
+                    // Insert each answer as a separate evaluation record, include comment on the first inserted row
+                    $answerQuery = "INSERT INTO evaluations (evaluator_id, evaluator_type, teacher_id, subject_id, questionnaire_id, answer, comment, school_year_id, created_at) 
+                                   VALUES (?, 'student', ?, ?, ?, ?, ?, ?, NOW())";
                     $answerStmt = $conn->prepare($answerQuery);
                     if (!$answerStmt) {
                         throw new Exception("Answer prepare failed: " . $conn->error);
                     }
-                    $answerStmt->bind_param('iiiisi', $student_id, $teacher_id, $subject_id, $questionId, $rating, $currentSchoolYear);
+                    // For the first question include the comment text; subsequent rows use same comment as optional
+                    $includeComment = true;
+                    // Bind types: i - student_id, i - teacher_id, i - subject_id, i - questionId, i - rating, s - comment, i - schoolYear
+                    $bindTypes = 'iiiiisi';
+                    $stmtComment = $comment;
+                    if (!@$answerStmt->bind_param($bindTypes, $student_id, $teacher_id, $subject_id, $questionId, $rating, $stmtComment, $currentSchoolYear)) {
+                        throw new Exception("Bind failed: " . $answerStmt->error);
+                    }
                     if (!$answerStmt->execute()) {
                         throw new Exception("Answer execute failed: " . $answerStmt->error);
                     }

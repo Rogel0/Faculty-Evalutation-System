@@ -25,12 +25,22 @@ CREATE TABLE IF NOT EXISTS subjects (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )";
 
+// Create teacher_subjects table if it doesn't exist
+$createTeacherSubjects = "
+CREATE TABLE IF NOT EXISTS teacher_subjects (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    teacher_id INT NOT NULL,
+    subject_id INT NOT NULL,
+    school_year_id INT DEFAULT NULL
+)";
+
 // Note: Your evaluations table already exists in your database
 // We'll work with the existing structure
 
 $tables = [
     'student_enrollments' => $createEnrollmentsTable,
-    'subjects' => $createSubjectsTable
+    'subjects' => $createSubjectsTable,
+    'teacher_subjects' => $createTeacherSubjects
 ];
 
 foreach ($tables as $tableName => $sql) {
@@ -39,6 +49,30 @@ foreach ($tables as $tableName => $sql) {
     } else {
         echo "<p style='color: red;'>✗ Error creating table '$tableName': " . $conn->error . "</p>";
     }
+}
+
+// Ensure student_enrollments has a teacher_id column (safe ALTER)
+$colRes = $conn->query("SHOW COLUMNS FROM student_enrollments LIKE 'teacher_id'");
+if ($colRes && $colRes->num_rows === 0) {
+    if ($conn->query("ALTER TABLE student_enrollments ADD COLUMN teacher_id INT DEFAULT NULL")) {
+        echo "<p style='color: green;'>✓ Column 'teacher_id' added to student_enrollments</p>";
+    } else {
+        echo "<p style='color: red;'>✗ Failed to add teacher_id column: " . $conn->error . "</p>";
+    }
+} else {
+    echo "<p style='color: gray;'>Column 'teacher_id' already exists in student_enrollments</p>";
+}
+
+// Ensure users has teacher_code column
+$colRes2 = $conn->query("SHOW COLUMNS FROM users LIKE 'teacher_code'");
+if ($colRes2 && $colRes2->num_rows === 0) {
+    if ($conn->query("ALTER TABLE users ADD COLUMN teacher_code VARCHAR(50) NULL, ADD UNIQUE KEY ux_users_teacher_code (teacher_code)")) {
+        echo "<p style='color: green;'>✓ Column 'teacher_code' added to users</p>";
+    } else {
+        echo "<p style='color: red;'>✗ Failed to add teacher_code column: " . $conn->error . "</p>";
+    }
+} else {
+    echo "<p style='color: gray;'>Column 'teacher_code' already exists in users</p>";
 }
 
 // Add some sample subjects (matching your schema)
@@ -72,4 +106,3 @@ echo "<li>Add evaluation criteria and questions through the questionnaire system
 echo "</ul>";
 
 echo "<p><a href='index.php'>← Back to Login</a></p>";
-?>

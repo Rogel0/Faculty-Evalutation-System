@@ -333,13 +333,13 @@ if ($selected_enrollment) {
                             </svg>
                             Back to Teachers List
                         </a>
-                        <a href="?module=my-evaluations"
+                        <!-- <a href="?module=my-evaluations"
                             class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200 text-center">
                             <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                             </svg>
                             View My Evaluations
-                        </a>
+                        </a> -->
                     </div>
                 </div>
             </div>
@@ -504,6 +504,15 @@ if ($selected_enrollment) {
                                     </div>
                                     <?php $criteriaIndex++; ?>
                                 <?php endforeach; ?>
+
+                                <!-- Comment Box (required) -->
+                                <div class="px-4 md:px-6 py-4 bg-white border-t border-gray-200">
+                                    <label for="comment" class="block text-sm font-medium text-gray-700 mb-2">Comments (required)</label>
+                                    <textarea id="comment" name="comment" required maxlength="2000" rows="4"
+                                        class="w-full p-3 border border-gray-300 rounded-md focus:ring-yellow-500 focus:border-yellow-500 text-sm placeholder-gray-400"
+                                        placeholder="Please provide constructive feedback about the teacher's performance (this is required)."></textarea>
+                                    <p class="text-xs text-gray-500 mt-2">Your comment will help improve teaching quality. Please be respectful and constructive.</p>
+                                </div>
 
                                 <!-- Submit Button -->
                                 <div class="sticky bottom-0 bg-white border-t border-gray-200 pt-5">

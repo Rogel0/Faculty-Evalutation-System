@@ -1,0 +1,7 @@
+2025-10-23T18:13:04+02:00 - ERROR: Column 'school_year_id' cannot be null
+BUFFER:
+
+TRACE:
+#0 C:\xampp\htdocs\faculty_evaluation\src\actions\BatchStudentUpload.php(414): mysqli_stmt->execute()
+#1 {main}
+----

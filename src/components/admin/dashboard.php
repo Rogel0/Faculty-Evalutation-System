@@ -492,6 +492,10 @@ try {
                     </div>
                 </form>
 
+                <div class="mt-3 flex gap-2">
+                    <a href="../actions/GenerateEvaluationReport.php<?php echo $selected_school_year !== 'all' ? '?school_year=' . intval($selected_school_year) : ''; ?>" class="px-3 py-2 bg-green-600 text-white rounded-md text-sm hover:bg-green-700">Download Excel Report</a>
+                </div>
+
                 <?php if ($selected_school_year !== 'all'): ?>
                     <div class="mt-2">
                         <a href="?<?php echo isset($_GET['module']) ? 'module=' . htmlspecialchars($_GET['module']) : ''; ?>"

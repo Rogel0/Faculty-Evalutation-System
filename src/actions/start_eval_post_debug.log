@@ -1,0 +1,12 @@
+---- 2025-10-23T15:57:48+02:00 START_EVAL POST RECEIVED ----
+Array
+(
+    [start_time] => 2025-10-23T21:57
+    [end_time] => 2025-10-24T21:57
+    [evaluation_type] => student
+    [start_btn] => student
+)
+
+RAW_INPUT:
+start_time=2025-10-23T21%3A57&end_time=2025-10-24T21%3A57&evaluation_type=student&start_btn=student
+

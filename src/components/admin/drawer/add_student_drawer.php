@@ -28,7 +28,9 @@ include_once('../config/database.php');
                             <div>
                                 <label for="student_id" class="block text-sm font-medium text-gray-700">Student ID</label>
                                 <input type="text" name="student_id" id="student_id" required placeholder="Enter student ID"
+                                    inputmode="tel" pattern="[0-9-]+"
                                     class="mt-2 w-full rounded-lg border-gray-300 focus:border-amber-500 focus:ring-amber-200 px-4 py-2.5 shadow-sm">
+                                <p id="studentIdHint" class="text-xs text-gray-400 mt-1">Numbers and hyphen allowed (e.g., 2021-001)</p>
                             </div>
                             <!-- Last Name -->
                             <div>
@@ -70,6 +72,15 @@ include_once('../config/database.php');
                                         <option value="SPORTS">Sports Track</option>
                                         <option value="AD">Arts and Design Track</option>
                                     </optgroup>
+                                </select>
+                            </div>
+                            <!-- Grade Level -->
+                            <div>
+                                <label for="grade_level" class="block text-sm font-medium text-gray-700">Grade Level</label>
+                                <select name="grade_level" id="grade_level" required class="mt-2 w-full rounded-lg border-gray-300 focus:border-amber-500 focus:ring-amber-200 px-4 py-2.5 shadow-sm">
+                                    <option value="">Select Grade Level</option>
+                                    <option value="11">Grade 11</option>
+                                    <option value="12">Grade 12</option>
                                 </select>
                             </div>
                         </div>

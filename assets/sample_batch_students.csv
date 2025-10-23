@@ -1,0 +1,3 @@
+student_id,firstname,lastname,middle_name,email,birthdate,strand,grade_level,subject_codes
+S001,Juan,Dela Cruz,Reyes,juan@example.com,2006-04-12,STEM,11,ENG101,MATH101
+S002,Maria,Santos,Lopez,maria@example.com,2005-09-30,ABM,12,ACC201,FIN201

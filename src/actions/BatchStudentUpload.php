@@ -165,68 +165,90 @@ try {
     // collect warnings (e.g., subject codes not found) to return to the client
     $all_warnings = [];
 
+    $created_at = date('Y-m-d H:i:s');
     $conn->begin_transaction();
 
     try {
         foreach ($students as $student) {
-            // Generate username and password
-            $username = strtolower(preg_replace(
-                '/[^a-zA-Z0-9]/',
-                '',
-                $student['firstname'] . $student['lastname']
-            ));
+            // Generate base username and random password for new accounts
+            $baseUsername = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $student['firstname'] . $student['lastname']));
             $plainPassword = substr(str_shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 8);
             $hashedPassword = password_hash($plainPassword, PASSWORD_DEFAULT);
 
-            // Insert or update student
-            $stmt = $conn->prepare(
-                "INSERT INTO users (student_id, firstname, lastname, middlename, email, 
-                                   username, password, birthdate, strand, grade_level, user_type)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'student')
-                 ON DUPLICATE KEY UPDATE
-                 firstname=VALUES(firstname),
-                 lastname=VALUES(lastname),
-                 middlename=VALUES(middlename),
-                 email=VALUES(email),
-                 birthdate=VALUES(birthdate),
-                 strand=VALUES(strand),
-                 grade_level=VALUES(grade_level)"
-            );
-
-            $stmt->bind_param(
-                "ssssssssss",
-                $student['student_id'],
-                $student['firstname'],
-                $student['lastname'],
-                $student['middle_name'],
-                $student['email'],
-                $username,
-                $hashedPassword,
-                $student['birthdate'],
-                $student['strand'],
-                $student['grade_level']
-            );
-
-            if (!$stmt->execute()) {
-                $stmt->close();
-                throw new Exception("Error inserting student: " . $stmt->error);
-            }
-            $stmt->close();
-
-            // Get numeric user id for this student (users.id) by student_id value
+            // Determine if a student with given student_id already exists
             $student_user_id = null;
-            $idStmt = $conn->prepare("SELECT id FROM users WHERE student_id = ? LIMIT 1");
-            if ($idStmt) {
-                $idStmt->bind_param('s', $student['student_id']);
-                $idStmt->execute();
-                $idStmt->bind_result($uid);
-                if ($idStmt->fetch()) {
-                    $student_user_id = (int)$uid;
+            if (!empty($student['student_id'])) {
+                $chk = $conn->prepare("SELECT id, username FROM users WHERE student_id = ? AND user_type = 'student' LIMIT 1");
+                if ($chk) {
+                    $chk->bind_param('s', $student['student_id']);
+                    $chk->execute();
+                    $cres = $chk->get_result();
+                    if ($cres && $cres->num_rows > 0) {
+                        $r = $cres->fetch_assoc();
+                        $student_user_id = (int)$r['id'];
+                        $existingUsername = $r['username'] ?? null;
+                    }
+                    $chk->close();
                 }
-                $idStmt->close();
             }
-            if ($student_user_id === null) {
-                throw new Exception('Failed to determine user id for student: ' . $student['student_id']);
+
+            if ($student_user_id !== null) {
+                // Update existing student record (do not overwrite password or username)
+                $up = $conn->prepare("UPDATE users SET firstname = ?, lastname = ?, middlename = ?, email = ?, birthdate = ?, strand = ?, grade_level = ? WHERE id = ? AND user_type = 'student'");
+                if (!$up) throw new Exception('Prepare failed (update student): ' . $conn->error);
+                // use variables for bind_param (must be variables, not array elements)
+                $u_firstname = $student['firstname'];
+                $u_lastname = $student['lastname'];
+                $u_middlename = $student['middle_name'];
+                $u_email = $student['email'];
+                $u_birthdate = $student['birthdate'];
+                $u_strand = $student['strand'];
+                $u_grade = $student['grade_level'];
+                $u_id = $student_user_id;
+                $up->bind_param('sssssssi', $u_firstname, $u_lastname, $u_middlename, $u_email, $u_birthdate, $u_strand, $u_grade, $u_id);
+                if (!$up->execute()) {
+                    $up->close();
+                    throw new Exception('Failed to update existing student: ' . $up->error);
+                }
+                $up->close();
+            } else {
+                // Create a unique username if needed
+                $username = $baseUsername;
+                if (empty($username)) $username = 'student' . rand(1000, 9999);
+                $ucheck = $conn->prepare("SELECT id FROM users WHERE username = ? LIMIT 1");
+                $suffix = 0;
+                while (true) {
+                    $ucheck->bind_param('s', $username);
+                    $ucheck->execute();
+                    $ucheck->store_result();
+                    if ($ucheck->num_rows === 0) break;
+                    $suffix++;
+                    $username = $baseUsername . $suffix;
+                }
+                $ucheck->close();
+
+                // Insert new student
+                $ins = $conn->prepare("INSERT INTO users (student_id, username, password, firstname, lastname, middlename, email, birthdate, strand, grade_level, user_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'student', ?)");
+                if (!$ins) throw new Exception('Prepare failed (insert student): ' . $conn->error);
+                // prepare variables for bind_param
+                $i_student_id = $student['student_id'];
+                $i_username = $username;
+                $i_password = $hashedPassword;
+                $i_firstname = $student['firstname'];
+                $i_lastname = $student['lastname'];
+                $i_middlename = $student['middle_name'];
+                $i_email = $student['email'];
+                $i_birthdate = $student['birthdate'];
+                $i_strand = $student['strand'];
+                $i_grade = $student['grade_level'];
+                $i_created_at = $student['created_at'] ?? $created_at;
+                $ins->bind_param('sssssssssss', $i_student_id, $i_username, $i_password, $i_firstname, $i_lastname, $i_middlename, $i_email, $i_birthdate, $i_strand, $i_grade, $i_created_at);
+                if (!$ins->execute()) {
+                    $ins->close();
+                    throw new Exception('Error inserting student: ' . $ins->error);
+                }
+                $student_user_id = (int)$conn->insert_id;
+                $ins->close();
             }
 
             // Handle subject assignments using existing `student_enrollments` and `subjects` tables
@@ -248,6 +270,12 @@ try {
                 } else {
                     $syRes2 = $conn->query("SELECT id FROM school_years ORDER BY id DESC LIMIT 1");
                     if ($syRes2 && $row2 = $syRes2->fetch_assoc()) $school_year_id = (int)$row2['id'];
+                }
+
+                // If still null, use 0 (or another sentinel) to satisfy NOT NULL constraints and record a warning
+                if ($school_year_id === null) {
+                    $school_year_id = 0;
+                    $warnings[] = 'No school year found; enrollments will be created with school_year_id=0';
                 }
 
                 // Prepare subject lookup statement (try by subject_code, then by subject_name)
@@ -431,7 +459,18 @@ try {
             $_SESSION['warning'] = 'Upload completed with warnings. Click to view details.';
         }
 
-        // For actual upload requests, don't return JSON — redirect back to referrer and use session to show messages/toasts
+        // If this request asked for AJAX (client-side upload), return JSON with warnings/success
+        if (isset($_POST['ajax']) && $_POST['ajax'] === 'true') {
+            // Build a minimal JSON payload
+            $payload = ['success' => true];
+            if (!empty($all_warnings)) $payload['warnings'] = $all_warnings;
+            // restore error handler before output
+            restore_error_handler();
+            echo json_encode($payload);
+            exit;
+        }
+
+        // For non-AJAX requests, redirect back to referrer and use session to show messages/toasts
         $redirect = isset($_SERVER['HTTP_REFERER']) && !empty($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '/faculty_evaluation/src/';
         header('Location: ' . $redirect);
         exit;
@@ -450,15 +489,21 @@ try {
         $msg .= ' | Output: ' . strip_tags($buffer);
     }
 
-    // If this was a preview request, return JSON (preview uses AJAX). Otherwise set session error and redirect back.
-    if (isset($isPreview) && $isPreview) {
+    // If this was a preview request, return JSON (preview uses AJAX).
+    // Also return JSON for AJAX uploads so client-side code can display errors.
+    if ((isset($isPreview) && $isPreview) || (isset($_POST['ajax']) && $_POST['ajax'] === 'true')) {
+        header('Content-Type: application/json');
+        // write debug log for server-side errors during AJAX to help diagnose HTML responses
+        $logPath = __DIR__ . '/batch_upload_error.log';
+        $logEntry = date('c') . " - ERROR: " . $msg . "\nBUFFER:\n" . $buffer . "\nTRACE:\n" . (string)$e->getTraceAsString() . "\n----\n";
+        @file_put_contents($logPath, $logEntry, FILE_APPEND | LOCK_EX);
         echo json_encode(['success' => false, 'error' => $msg]);
         exit;
-    } else {
-        // set session error and redirect back to referrer
-        $_SESSION['error'] = $msg;
-        $redirect = isset($_SERVER['HTTP_REFERER']) && !empty($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '/faculty_evaluation/src/';
-        header('Location: ' . $redirect);
-        exit;
     }
+
+    // set session error and redirect back to referrer for non-AJAX requests
+    $_SESSION['error'] = $msg;
+    $redirect = isset($_SERVER['HTTP_REFERER']) && !empty($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '/faculty_evaluation/src/';
+    header('Location: ' . $redirect);
+    exit;
 }
